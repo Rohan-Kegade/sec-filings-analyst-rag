@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = Field(default=None, validation_alias="GEMINI_API_KEY")
     llm_model: str = "gemini-3.1-flash-lite"
     llm_thinking_level: str = "medium"  # low | medium | high
+    rewrite_thinking_level: str = "low"  # for turning follow-ups into standalone questions
+
+    # Chat
+    chat_history_turns: int = 3  # earlier question/answer pairs sent with a follow-up
+
+    @property
+    def chat_db_path(self) -> Path:
+        return self.data_dir / "chats.db"
 
     @property
     def raw_dir(self) -> Path:

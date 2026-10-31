@@ -1,8 +1,13 @@
 from pydantic import BaseModel, Field
 
+from sec_rag.models import ChatMessage, Conversation, Source
+
 
 class QueryRequest(BaseModel):
     question: str = Field(min_length=3)
+    conversation_id: str | None = Field(
+        default=None, description="Continue this conversation: follow-ups work and it is saved"
+    )
     ticker: str | None = None
     fiscal_year: int | None = None
     item: str | None = Field(default=None, description='10-K item, e.g. "1A" or "7"')
@@ -13,17 +18,17 @@ class QueryRequest(BaseModel):
         return {k: v for k, v in filters.items() if v is not None}
 
 
-class Source(BaseModel):
-    ticker: str
-    company_name: str
-    fiscal_year: int
-    item: str
-    item_title: str
-    source_url: str
-    score: float
-    excerpt: str
-
-
 class QueryResponse(BaseModel):
     answer: str
+    standalone_question: str
+    conversation_id: str | None
     sources: list[Source]
+
+
+class CreateConversationRequest(BaseModel):
+    title: str = Field(default="", description="Leave empty to use the first question")
+
+
+class ConversationDetail(BaseModel):
+    conversation: Conversation
+    messages: list[ChatMessage]

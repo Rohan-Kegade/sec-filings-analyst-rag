@@ -39,11 +39,11 @@ def ask(
     from sec_rag.pipeline import RAGPipeline
 
     filters = {k: v for k, v in {"ticker": ticker, "fiscal_year": year}.items() if v}
-    chunks, text_stream = RAGPipeline().ask_stream(question, filters=filters, top_k=top_k)
-    for text in text_stream:
+    result = RAGPipeline().ask_stream(question, filters=filters, top_k=top_k)
+    for text in result.text_stream:
         typer.echo(text, nl=False)
     typer.echo("\n\nSources:")
-    for i, rc in enumerate(chunks, start=1):
+    for i, rc in enumerate(result.sources, start=1):
         c = rc.chunk
         typer.echo(f"  [{i}] {c.ticker} FY{c.fiscal_year} Item {c.item} ({rc.score:.2f})")
 
