@@ -5,13 +5,16 @@ import streamlit as st
 from sec_rag.pipeline import RAGPipeline
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner="Loading models (first start only)...")
 def get_pipeline() -> RAGPipeline:
-    return RAGPipeline()
+    return RAGPipeline().warm_up()
 
 
 st.set_page_config(page_title="10-K Analyst", layout="wide")
 st.title("SEC 10-K Analyst")
+
+# Load models when the page opens, not when the first question is asked.
+pipeline = get_pipeline()
 
 with st.sidebar:
     ticker = st.text_input("Ticker filter (optional)").strip().upper() or None
@@ -22,7 +25,7 @@ question = st.chat_input("Ask about a company's 10-K...")
 if question:
     st.chat_message("user").write(question)
     filters = {k: v for k, v in {"ticker": ticker, "fiscal_year": year or None}.items() if v}
-    chunks, text_stream = get_pipeline().ask_stream(question, filters=filters, top_k=top_k)
+    chunks, text_stream = pipeline.ask_stream(question, filters=filters, top_k=top_k)
     st.chat_message("assistant").write_stream(text_stream)
 
     with st.expander("Sources"):

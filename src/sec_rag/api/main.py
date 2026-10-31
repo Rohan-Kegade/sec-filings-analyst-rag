@@ -1,5 +1,6 @@
 """FastAPI service. Run with: uvicorn sec_rag.api.main:app --reload"""
 
+from contextlib import asynccontextmanager
 from functools import lru_cache
 
 from fastapi import FastAPI
@@ -8,12 +9,20 @@ from fastapi.responses import StreamingResponse
 from sec_rag.api.schemas import QueryRequest, QueryResponse, Source
 from sec_rag.pipeline import RAGPipeline
 
-app = FastAPI(title="SEC 10-K Analyst RAG")
-
 
 @lru_cache
 def get_pipeline() -> RAGPipeline:
     return RAGPipeline()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load models before accepting requests so the first query isn't slow.
+    get_pipeline().warm_up()
+    yield
+
+
+app = FastAPI(title="SEC 10-K Analyst RAG", lifespan=lifespan)
 
 
 @app.get("/health")

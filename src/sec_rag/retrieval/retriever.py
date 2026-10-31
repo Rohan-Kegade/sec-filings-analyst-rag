@@ -19,6 +19,11 @@ class Retriever:
             self._known_tickers = self.store.known_tickers()
         return self._known_tickers
 
+    def warm_up(self) -> None:
+        """Load the embedding model and ticker list now instead of on the first query."""
+        self.embedder.embed_query("warm up")
+        _ = self.known_tickers
+
     def retrieve(
         self, question: str, k: int = settings.top_k, filters: dict | None = None
     ) -> list[RetrievedChunk]:

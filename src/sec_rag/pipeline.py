@@ -13,6 +13,11 @@ class RAGPipeline:
         self.retriever = retriever or Retriever()
         self.generator = generator or AnswerGenerator()
 
+    def warm_up(self) -> "RAGPipeline":
+        """Pay the one-time model loading cost (~10s) up front, e.g. at server startup."""
+        self.retriever.warm_up()
+        return self
+
     def ask(self, question: str, filters: dict | None = None, top_k: int = settings.top_k) -> Answer:
         chunks = self.retriever.retrieve(question, k=top_k, filters=filters)
         if not chunks:
