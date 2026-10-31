@@ -19,9 +19,10 @@ def index_filings(embedder: Embedder | None = None, store: VectorStore | None = 
 
     total = 0
     for metadata, html_path in load_raw_filings():
-        filing = parse_filing(html_path.read_text(encoding="utf-8", errors="ignore"), metadata)
+        # Pass bytes so BeautifulSoup detects the document's encoding itself.
+        filing = parse_filing(html_path.read_bytes(), metadata)
         processed_path = settings.processed_dir / f"{metadata.ticker}_{html_path.stem}.json"
-        processed_path.write_text(filing.model_dump_json(indent=2))
+        processed_path.write_text(filing.model_dump_json(indent=2), encoding="utf-8")
 
         chunks = chunk_filing(filing)
         store.upsert(chunks, embedder.embed_documents([c.text for c in chunks]))

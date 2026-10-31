@@ -79,7 +79,7 @@ class EdgarClient:
 
         if not html_path.exists():
             html_path.write_bytes(self._get(metadata.source_url).content)
-            meta_path.write_text(metadata.model_dump_json(indent=2))
+            meta_path.write_text(metadata.model_dump_json(indent=2), encoding="utf-8")
         return html_path
 
 
@@ -87,6 +87,6 @@ def load_raw_filings(raw_dir: Path = settings.raw_dir) -> list[tuple[FilingMetad
     """Return (metadata, html_path) for every downloaded filing."""
     results = []
     for meta_path in sorted(raw_dir.glob("*/*.json")):
-        metadata = FilingMetadata(**json.loads(meta_path.read_text()))
+        metadata = FilingMetadata(**json.loads(meta_path.read_text(encoding="utf-8")))
         results.append((metadata, meta_path.with_suffix(".html")))
     return results

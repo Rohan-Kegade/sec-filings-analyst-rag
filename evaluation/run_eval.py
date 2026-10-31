@@ -13,7 +13,7 @@ EVAL_FILE = Path(__file__).parent / "eval_set.jsonl"
 
 def main(k: int = 8) -> None:
     retriever = Retriever()
-    cases = [json.loads(line) for line in EVAL_FILE.read_text().splitlines() if line.strip()]
+    cases = [json.loads(line) for line in EVAL_FILE.read_text(encoding="utf-8").splitlines() if line.strip()]
 
     hits, reciprocal_ranks = 0, []
     for case in cases:

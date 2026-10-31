@@ -1,10 +1,15 @@
 """Convert raw 10-K HTML into clean text split by Item sections."""
 
 import re
+import warnings
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 
 from sec_rag.models import Filing, FilingMetadata, Section
+
+# Modern 10-Ks are inline XBRL: XHTML with an <?xml?> declaration. We only need the
+# visible text, which the lenient HTML parser extracts more reliably than an XML parser.
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 ITEM_TITLES = {
     "1": "Business",
@@ -31,15 +36,20 @@ ITEM_TITLES = {
     "15": "Exhibits and Financial Statement Schedules",
     "16": "Form 10-K Summary",
 }
+ITEM_ORDER = {item: i for i, item in enumerate(ITEM_TITLES)}
 
-# Matches "Item 1A." / "ITEM 7:" / "Item 7A -" at the start of a line.
+# Headings closer together than this are TOC entries or page headers, not section starts.
+MIN_HEADING_GAP = 200
+
+# Matches "Item 1A." / "ITEM 7:" / "Item 7A -" at the start of a line. Two-digit items
+# come first and \b is required, so "Item 10" is not read as "Item 1".
 ITEM_PATTERN = re.compile(
-    r"^\s*item\s+(1[abc]?|[2-6]|7a?|8|9[abc]?|1[0-6])\s*[\.\:\-–—]?",
+    r"^\s*item\s+(1[0-6]|1[abc]?|[2-6]|7a?|8|9[abc]?)\b\s*[\.\:\-–—]?",
     re.IGNORECASE | re.MULTILINE,
 )
 
 
-def html_to_text(html: str) -> str:
+def html_to_text(html: str | bytes) -> str:
     soup = BeautifulSoup(html, "lxml")
     # Inline XBRL filings carry a hidden header full of machine-readable facts.
     for tag in soup.find_all(["script", "style", "ix:header"]):
@@ -51,20 +61,52 @@ def html_to_text(html: str) -> str:
     return text.strip()
 
 
-def split_into_items(text: str) -> list[Section]:
-    """Split filing text into Item sections.
+def _find_section_starts(text: str) -> list[tuple[int, str]]:
+    """Return (position, item) for the real start of each Item section.
 
-    The table of contents repeats every Item heading, so for each item we keep
-    its last heading occurrence, which is normally the start of the real section.
+    Item headings also appear in the table of contents and, in some filings, as a
+    running header on every page. Headings followed almost immediately by another
+    heading (TOC entries, a page header right above the real title) are dropped.
+    Of the rest, we take the longest run in 10-K order and use the first occurrence
+    of each item in it, which skips repeated page headers and stray cross-references.
     """
-    last_match: dict[str, int] = {}
-    for match in ITEM_PATTERN.finditer(text):
-        last_match[match.group(1).upper()] = match.start()
+    matches = [(m.start(), m.group(1).upper()) for m in ITEM_PATTERN.finditer(text)]
+    candidates = [
+        (pos, item)
+        for idx, (pos, item) in enumerate(matches)
+        if idx + 1 == len(matches) or matches[idx + 1][0] - pos >= MIN_HEADING_GAP
+    ]
+    if not candidates:
+        return []
 
-    if not last_match:
+    # Longest increasing subsequence by item order (n is a few hundred at most).
+    length = [1] * len(candidates)
+    prev = [-1] * len(candidates)
+    for i, (_, item_i) in enumerate(candidates):
+        for j in range(i):
+            if ITEM_ORDER[candidates[j][1]] < ITEM_ORDER[item_i] and length[j] + 1 > length[i]:
+                length[i], prev[i] = length[j] + 1, j
+
+    chain = []
+    idx = max(range(len(candidates)), key=length.__getitem__)
+    while idx != -1:
+        chain.append(candidates[idx][1])
+        idx = prev[idx]
+    chain.reverse()
+
+    starts = []
+    for pos, item in candidates:
+        if len(starts) < len(chain) and item == chain[len(starts)]:
+            starts.append((pos, item))
+    return starts
+
+
+def split_into_items(text: str) -> list[Section]:
+    """Split filing text into Item sections."""
+    starts = _find_section_starts(text)
+    if not starts:
         return [Section(item="FULL", title="Full Filing", text=text)]
 
-    starts = sorted((pos, item) for item, pos in last_match.items())
     sections = []
     for idx, (pos, item) in enumerate(starts):
         end = starts[idx + 1][0] if idx + 1 < len(starts) else len(text)
@@ -74,5 +116,5 @@ def split_into_items(text: str) -> list[Section]:
     return sections
 
 
-def parse_filing(html: str, metadata: FilingMetadata) -> Filing:
+def parse_filing(html: str | bytes, metadata: FilingMetadata) -> Filing:
     return Filing(metadata=metadata, sections=split_into_items(html_to_text(html)))
