@@ -7,7 +7,7 @@ EDGAR ──► download ──► parse into Items ──► chunk ──► em
                                                                    │
 question ──► extract filters (ticker/year) ──► vector search ◄─────┘
                                                    │
-                                     top-k chunks ─┴─► Claude ──► cited answer
+                                     top-k chunks ─┴─► Gemini ──► cited answer
 ```
 
 ## Project structure
@@ -30,7 +30,7 @@ sec-filings-analyst-rag/
 │   │   └── retriever.py       # Dense search + metadata filtering
 │   ├── generation/
 │   │   ├── prompts.py         # System prompt + context formatting
-│   │   └── llm.py             # Claude answer generation (streaming)
+│   │   └── llm.py             # Gemini answer generation (streaming)
 │   ├── pipeline.py            # RAGPipeline: retrieve + generate
 │   ├── api/                   # FastAPI service (/query, /query/stream, /health)
 │   └── cli.py                 # `sec-rag download | index | ask`
@@ -52,7 +52,7 @@ Use Python 3.11–3.13 (PyTorch and ChromaDB wheels may lag behind the newest Py
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (source .venv/bin/activate on macOS/Linux)
 pip install -e ".[ui,dev]"
-copy .env.example .env          # then fill in ANTHROPIC_API_KEY and your EDGAR user agent
+copy .env.example .env          # then fill in GEMINI_API_KEY and your EDGAR user agent
 ```
 
 ## Usage

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,9 +28,9 @@ class Settings(BaseSettings):
     top_k: int = 8
 
     # Generation
-    llm_model: str = "claude-opus-5-5"
-    llm_max_tokens: int = 16000
-    llm_effort: str = "medium"
+    gemini_api_key: str | None = Field(default=None, validation_alias="GEMINI_API_KEY")
+    llm_model: str = "gemini-3.1-flash-lite"
+    llm_thinking_level: str = "medium"  # low | medium | high
 
     @property
     def raw_dir(self) -> Path:
