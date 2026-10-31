@@ -26,7 +26,11 @@ if question:
     st.chat_message("user").write(question)
     filters = {k: v for k, v in {"ticker": ticker, "fiscal_year": year or None}.items() if v}
     chunks, text_stream = pipeline.ask_stream(question, filters=filters, top_k=top_k)
-    st.chat_message("assistant").write_stream(text_stream)
+    with st.chat_message("assistant"):
+        try:
+            st.write_stream(text_stream)
+        except Exception as exc:  # e.g. Gemini 503 "high demand" or a network error
+            st.error(f"Couldn't get an answer from Gemini. Please try again in a moment.\n\n{exc}")
 
     with st.expander("Sources"):
         for i, rc in enumerate(chunks, start=1):
