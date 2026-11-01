@@ -5,10 +5,6 @@
     "additional_metadata": {
       "id": "msft-employees-2024",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["approximately 228,000 full-time employees", "as of June 30, 2024"],
-      "required_points": ["approximately 228,000 full-time employees as of June 30, 2024"],
       "sources": [
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "1", "quote": "As of June 30, 2024, we employed approximately 228,000 people on a full-time basis, 126,000 in the U.S. and 102,000 internationally."},
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "1", "quote": "45,000 were in sales and marketing; and 16,000 were in general and administration."}
@@ -21,10 +17,6 @@
     "additional_metadata": {
       "id": "aapl-employees-2024",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["approximately 164,000 full-time equivalent employees", "as of September 28, 2024"],
-      "required_points": ["approximately 164,000 full-time equivalent employees as of September 28, 2024"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1", "quote": "As of September 28, 2024, the Company had approximately 164,000 full-time equivalent employees."}
       ]
@@ -36,10 +28,6 @@
     "additional_metadata": {
       "id": "nvda-employees-2025",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["approximately 36,000 employees", "at the end of fiscal year 2025"],
-      "required_points": ["approximately 36,000 employees at the end of fiscal year 2025"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1", "quote": "As of the end of fiscal year 2025, we had approximately 36,000 employees in 38 countries; 27,100 were engaged in research and development"}
       ]
@@ -51,10 +39,6 @@
     "additional_metadata": {
       "id": "aapl-hq-2024",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["headquarters in Cupertino, California", "Apple both owns and leases its facilities"],
-      "required_points": ["headquarters in Cupertino, California", "Apple both owns and leases its facilities"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "2", "quote": "The Company’s headquarters is located in Cupertino, California."},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "2", "quote": "the Company owned or leased facilities and land for corporate functions, R&D, data centers, retail and other purposes"}
@@ -67,10 +51,6 @@
     "additional_metadata": {
       "id": "msft-hq-2024",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["corporate headquarters in Redmond, Washington", "approximately 15 million square feet of space in King County, Washington"],
-      "required_points": ["corporate headquarters in Redmond, Washington", "approximately 15 million square feet of space in King County, Washington"],
       "sources": [
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "2", "quote": "Our corporate headquarters are located in Redmond, Washington."},
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "2", "quote": "We have approximately 15 million square feet of space located in King County, Washington"}
@@ -83,10 +63,6 @@
     "additional_metadata": {
       "id": "nvda-hq-2025",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["headquarters in Santa Clara, California"],
-      "required_points": ["headquarters in Santa Clara, California"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "2", "quote": "Our headquarters is in Santa Clara, California."},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "2", "quote": "We own and lease approximately 3 million square feet of office and building space for our corporate headquarters."}
@@ -99,10 +75,6 @@
     "additional_metadata": {
       "id": "aapl-buyback-2024",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["repurchased $95.0 billion of common stock during fiscal 2024"],
-      "required_points": ["$95.0 billion of common stock repurchased in fiscal 2024"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "7", "quote": "During 2024, the Company repurchased $95.0 billion of its common stock"},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "7", "quote": "In May 2024, the Company announced a new share repurchase program of up to $110 billion"}
@@ -116,10 +88,6 @@
     "additional_metadata": {
       "id": "msft-dividend-2025",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["quarterly dividend of $0.83 per share", "$3.32 per share declared for fiscal year 2025"],
-      "required_points": ["quarterly dividend of $0.83 per share in fiscal year 2025"],
       "sources": [
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "7", "quote": "During fiscal years 2025 and 2024, our Board of Directors declared dividends totaling $24.7 billion and $22.3 billion, respectively."}
       ],
@@ -132,10 +100,6 @@
     "additional_metadata": {
       "id": "nvda-fiscal-year-2025",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["52- or 53-week fiscal year ending on the last Sunday in January", "fiscal year 2025 was a 52-week year"],
-      "required_points": ["the fiscal year ends on the last Sunday in January (a 52- or 53-week year)", "fiscal year 2025 was a 52-week year"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "15", "quote": "We operate on a 52- or 53-week year, ending on the last Sunday in January. Fiscal years 2025, 2024 and 2023 were all 52-week years."},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "5", "quote": "As of January 26, 2025, we were authorized"}
@@ -149,10 +113,6 @@
     "additional_metadata": {
       "id": "aapl-auditor-2024",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Ernst & Young LLP"],
-      "required_points": ["Ernst & Young LLP"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "8", "quote": "Ernst & Young LLP | We have served as the Company’s auditor since 2009."}
       ],
@@ -165,10 +125,6 @@
     "additional_metadata": {
       "id": "msft-auditor-2024",
       "category": "fact",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Deloitte & Touche LLP"],
-      "required_points": ["Deloitte & Touche LLP"],
       "sources": [
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "7", "quote": "The Company engaged Deloitte & Touche LLP, an independent registered public accounting firm, to audit and render an opinion on the consolidated financial statements and internal control over financial reporting"},
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "8", "quote": "We have served as the Company's auditor since 1983."}
@@ -181,10 +137,6 @@
     "additional_metadata": {
       "id": "aapl-supply-chain-2024",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["manufacturing is performed by outsourcing partners located primarily in Asia (China mainland, India, Japan, South Korea, Taiwan and Vietnam)", "components from single or limited sources create supply and pricing risk", "trade restrictions and disruptions such as natural disasters can disrupt the supply chain"],
-      "required_points": ["manufacturing concentrated with outsourcing partners in Asia, often a small number of partners in single locations", "components from single or limited sources, with supply and pricing risk", "new products using custom components available from only one source", "trade restrictions such as tariffs and export controls", "disruptions from natural disasters, geopolitical events, public health issues or industrial accidents"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1A", "quote": "Substantially all of the Company’s manufacturing is performed in whole or in part by outsourcing partners located primarily in China mainland, India, Japan, South Korea, Taiwan and Vietnam"},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1A", "quote": "Because the Company currently obtains certain components from single or limited sources, the Company is subject to significant supply and pricing risks."},
@@ -200,10 +152,6 @@
     "additional_metadata": {
       "id": "msft-ai-risks-2025",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["AI is a highly competitive, rapidly evolving market with significant infrastructure costs", "flawed algorithms, biased data or harmful AI-generated content could cause legal, regulatory or reputational harm", "emerging AI regulation such as the EU AI Act may increase costs"],
-      "required_points": ["a competitive, rapidly evolving AI market", "high AI infrastructure costs that reduce operating margins", "flawed algorithms, biased data or harmful AI output leading to liability or reputational harm", "misuse of AI systems", "AI regulation such as the EU AI Act", "intellectual property claims over AI training and output"],
       "sources": [
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "1A", "quote": "AI technology and services are a highly competitive and rapidly evolving market"},
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "1A", "quote": "We are incurring significant costs to build and maintain infrastructure to support cloud-based and AI services, reducing operating margins."},
@@ -221,10 +169,6 @@
     "additional_metadata": {
       "id": "nvda-export-controls-2025",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["U.S. export controls require licenses to ship high-performance data center products such as the A100 and H100 to China", "NVIDIA has not received licenses to ship these restricted products to China", "NVIDIA ramped products designed for China that do not require an export license"],
-      "required_points": ["licensing requirements for exports of the A100, H100 and other high-performance products to China", "no licenses received to ship the restricted products, including Blackwell systems, to China", "products designed for China that do not require a license", "Data Center revenue in China grew but remains well below its share before the controls", "export controls have harmed NVIDIA's competitive position"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "7", "quote": "In August 2022, the USG announced licensing requirements that, with certain exceptions, impact exports to China (including Hong Kong and Macau) and Russia of our A100 and H100 integrated circuits"},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1A", "quote": "including, but not limited to, the A100, A800, H100, H800, L4, L40, L40S and RTX 4090"},
@@ -242,10 +186,6 @@
     "additional_metadata": {
       "id": "aapl-competition-2024",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["markets are highly competitive, with aggressive price competition and downward pressure on gross margins", "competitors imitate Apple's products and infringe its intellectual property", "Apple has a minority market share in smartphones, personal computers and tablets"],
-      "required_points": ["highly competitive markets with price competition and pressure on gross margins", "frequent new products, short product life cycles and rapid technological change", "imitation of Apple's products and infringement of its intellectual property", "competitors with broader product lines, lower prices or larger installed bases, and Apple's minority market share", "competing depends on innovation and Apple's integrated hardware and software approach"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1", "quote": "The markets for the Company’s products and services are highly competitive, and are characterized by aggressive price competition and resulting downward pressure on gross margins"},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1", "quote": "by imitating the Company’s products and infringing on its intellectual property"},
@@ -261,10 +201,6 @@
     "additional_metadata": {
       "id": "msft-cyber-2025",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["the Secure Future Initiative", "the Board of Directors oversees cybersecurity risk, with reviews at least quarterly", "the CISO reports to the EVP of Cloud + AI"],
-      "required_points": ["cybersecurity as a top priority and the Secure Future Initiative", "program alignment with NIST and testing such as red team exercises", "Board oversight with reviews at least quarterly", "the CISO leads cybersecurity and reports to the EVP of Cloud + AI", "the Cybersecurity Governance Council"],
       "sources": [
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "1C", "quote": "we launched the Secure Future Initiative (“SFI”) in November 2023 and expanded the scope of SFI in May 2024"},
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "1C", "quote": "Annually, we assess our cybersecurity program’s alignment with the National Institute of Standards & Technology’s Cyber Security Framework"},
@@ -281,10 +217,6 @@
     "additional_metadata": {
       "id": "nvda-cyber-2025",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["the program follows frameworks such as ISO 27001", "the Board and its Audit Committee oversee information security risks", "the Chief Security Officer reports to the Senior Vice President of Software Engineering"],
-      "required_points": ["an ISO 27001-based program integrated into overall risk management", "external experts, training and vendor risk assessments", "Board and Audit Committee oversight", "a cross-functional executive leadership team", "the Chief Security Officer reports to the SVP of Software Engineering"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1C", "quote": "Our information security management program generally follows processes outlined in frameworks such as the ISO 27001 international standard for Information Security"},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1C", "quote": "We also have a vendor risk assessment process"},
@@ -301,10 +233,6 @@
     "additional_metadata": {
       "id": "aapl-legal-2024",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["European Commission noncompliance investigations under the Digital Markets Act", "DOJ civil antitrust lawsuit filed on March 21, 2024", "Epic Games injunction concerning App Store links to outside purchasing"],
-      "required_points": ["the EU Digital Markets Act investigations", "the DOJ antitrust lawsuit", "the Epic Games litigation and injunction", "other legal proceedings in the ordinary course of business"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "3", "quote": "On March 25, 2024, the Commission announced that it had opened two formal noncompliance investigations against the Company under the DMA."},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "3", "quote": "alleging that the Company’s App Store rules are in breach of the DMA"},
@@ -320,10 +248,6 @@
     "additional_metadata": {
       "id": "msft-segments-2024",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Productivity and Business Processes", "Intelligent Cloud", "More Personal Computing"],
-      "required_points": ["Productivity and Business Processes", "Intelligent Cloud", "More Personal Computing"],
       "sources": [
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "1", "quote": "We operate our business and report our financial performance using three segments: Productivity and Business Processes, Intelligent Cloud, and More Personal Computing."},
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "1", "quote": "Dynamics business solutions, including Dynamics 365"},
@@ -341,10 +265,6 @@
     "additional_metadata": {
       "id": "nvda-segments-2025",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Compute & Networking", "Graphics"],
-      "required_points": ["Compute & Networking", "Graphics"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1", "quote": "The Compute & Networking segment includes our Data Center accelerated computing platforms and AI solutions and software; networking; automotive platforms and autonomous and electric vehicle solutions"},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1", "quote": "The Graphics segment includes GeForce GPUs for gaming and PCs, the GeForce NOW game streaming service"},
@@ -360,10 +280,6 @@
     "additional_metadata": {
       "id": "aapl-gross-margin-2024",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["total gross margin percentage was 46.2% in fiscal 2024", "Products gross margin increased due to cost savings, partially offset by product mix and foreign currency weakness", "Services gross margin increased due primarily to higher Services net sales"],
-      "required_points": ["the change in total gross margin percentage (46.2% from 44.1%)", "Products gross margin drivers: cost savings, offset by mix and foreign currency", "Services gross margin drivers: higher Services net sales and mix"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "7", "quote": "Total gross margin percentage 46.2 % 44.1 % 43.3 %"},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "7", "quote": "Products gross margin and Products gross margin percentage increased during 2024 compared to 2023 due to cost savings, partially offset by a different Products mix and the weakness in foreign currencies relative to the U.S. dollar."},
@@ -379,10 +295,6 @@
     "additional_metadata": {
       "id": "msft-cloud-growth-2025",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Microsoft Cloud revenue increased 23% to $168.9 billion", "Azure and other cloud services revenue grew 34%"],
-      "required_points": ["Microsoft Cloud revenue grew 23% to $168.9 billion", "Azure and other cloud services revenue grew 34%", "Microsoft 365 Commercial cloud revenue grew 15%", "Dynamics 365 revenue grew 19%"],
       "sources": [
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "7", "quote": "Microsoft Cloud revenue increased 23% to $168.9 billion."},
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "7", "quote": "Revenue from Microsoft 365 Commercial cloud, Azure and other cloud services, the commercial portion of LinkedIn, and Dynamics 365"},
@@ -399,10 +311,6 @@
     "additional_metadata": {
       "id": "nvda-datacenter-2025",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Data Center revenue was up 142% in fiscal year 2025", "growth was driven by demand for the Hopper architecture for AI"],
-      "required_points": ["Data Center revenue was up 142%", "demand for the Hopper architecture for large language models, recommendation engines and generative AI", "Data Center computing revenue grew 162% and networking revenue grew 51%"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "7", "quote": "Data Center revenue for fiscal year 2025 was up 142% from a year ago."},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "7", "quote": "driven by demand for our Hopper architecture accelerated computing platform used for large language models, recommendation engines, and generative AI applications"},
@@ -418,10 +326,6 @@
     "additional_metadata": {
       "id": "nvda-customers-2025",
       "category": "qualitative",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["yes, NVIDIA receives a significant amount of revenue from a limited number of customers", "direct Customers A, B and C represented 12%, 11% and 11% of total revenue"],
-      "required_points": ["yes, revenue is concentrated in a limited number of customers", "direct Customers A, B and C at 12%, 11% and 11% of revenue", "an indirect customer at 10% or more of revenue"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1A", "quote": "We have experienced periods where we receive a significant amount of our revenue from a limited number of customers, and this trend may continue."},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1A", "quote": "Sales to direct Customers A, B and C represented 12%, 11% and 11% of total revenue, respectively, for fiscal year 2025"},
@@ -436,10 +340,6 @@
     "additional_metadata": {
       "id": "nvda-cuda",
       "category": "exact_term",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["the CUDA programming model was introduced in 2006", "CUDA runs on all NVIDIA GPUs", "over 5.9 million developers use CUDA and NVIDIA's other software tools"],
-      "required_points": ["introduced in 2006, opening GPUs to compute-intensive applications", "the foundational programming model that runs on all NVIDIA GPUs", "part of NVIDIA's full-stack software platform with the CUDA-X libraries", "over 5.9 million developers"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1", "quote": "With our introduction of the CUDA programming model in 2006, we opened the parallel processing capabilities of our GPU to a broad range of compute-intensive applications"},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1", "quote": "Our full-stack includes the foundational CUDA programming model that runs on all NVIDIA GPUs"},
@@ -455,10 +355,6 @@
     "additional_metadata": {
       "id": "nvda-blackwell-2025",
       "category": "exact_term",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["NVIDIA launched the Blackwell architecture in fiscal year 2025", "production Blackwell systems began shipping in the fourth quarter of fiscal year 2025"],
-      "required_points": ["launched in fiscal year 2025 as data center scale infrastructure", "production shipments began in the fourth quarter of fiscal year 2025", "the Blackwell GeForce RTX 50 Series", "inventory provisions for low-yielding Blackwell material", "export license requirements for Blackwell systems"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1", "quote": "In fiscal year 2025, we launched the NVIDIA Blackwell architecture, a full set of data center scale infrastructure that includes GPUs, CPUs, DPUs, interconnects, switch chips and systems, and networking adapters."},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "7", "quote": "We began shipping production systems of the Blackwell architecture in the fourth quarter of fiscal year 2025."},
@@ -475,10 +371,6 @@
     "additional_metadata": {
       "id": "msft-activision",
       "category": "exact_term",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Microsoft completed the acquisition", "on October 13, 2023", "for a total purchase price of $75.4 billion"],
-      "required_points": ["Microsoft completed the acquisition", "on October 13, 2023"],
       "sources": [
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "8", "quote": "On October 13, 2023 , we completed our acquisition of Activision Blizzard, Inc."},
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "7", "quote": "for a total purchase price of $75.4 billion, consisting primarily of cash"},
@@ -496,10 +388,6 @@
     "additional_metadata": {
       "id": "aapl-vision-pro",
       "category": "exact_term",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Apple", "Vision Pro is Apple's first spatial computer, based on visionOS"],
-      "required_points": ["Apple"],
       "sources": [
         {"filing": "AAPL_2023_0000320193-23-000106", "item": "7", "quote": "Apple Vision Pro™, the Company’s first spatial computer featuring its new visionOS™, expected to be available in early calendar year 2024"},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1", "quote": "Apple Vision Pro™ is the Company’s first spatial computer based on its visionOS™ operating system."},
@@ -514,10 +402,6 @@
     "additional_metadata": {
       "id": "aapl-dma",
       "category": "exact_term",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Apple changed its EU business terms, fees, app distribution and payment options to comply with the DMA", "the European Commission opened noncompliance investigations against Apple under the DMA", "fines of up to 10% of Apple's annual worldwide net sales"],
-      "required_points": ["the changes Apple made in the EU to comply", "the possible impact on App Store sales and commissions", "the European Commission's investigations and preliminary findings", "possible fines of up to 10% of worldwide net sales"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1A", "quote": "including new business terms and alternative fee structures for iOS and iPadOS apps, alternative methods of distribution for iOS and iPadOS apps, alternative payment processing for apps across the Company’s operating systems"},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1A", "quote": "including if such business changes result in reduced App Store or other sales, reductions in the rate of the commission that the Company retains on such sales"},
@@ -534,10 +418,6 @@
     "additional_metadata": {
       "id": "msft-copilot-2025",
       "category": "exact_term",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Microsoft 365 Copilot is part of Microsoft 365 Commercial, an AI-powered business and productivity platform"],
-      "required_points": ["part of Microsoft 365 Commercial, an AI-powered productivity platform", "used to deliver productivity gains with AI and agents"],
       "sources": [
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "1", "quote": "Microsoft 365 Commercial is an AI-powered business and productivity solutions platform that brings together Office, Windows, Microsoft 365 Copilot, and Enterprise Mobility + Security to help organizations empower their employees."},
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "1", "quote": "Microsoft 365 Security and Compliance, and Microsoft 365 Copilot"},
@@ -551,10 +431,6 @@
     "additional_metadata": {
       "id": "msft-openai",
       "category": "exact_term",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["long-term strategic partnership established in 2019", "Microsoft is a major investor in OpenAI, with reciprocal revenue-sharing arrangements", "the OpenAI API is exclusive to Azure"],
-      "required_points": ["a long-term strategic partnership since 2019", "Microsoft is a major investor with revenue-sharing arrangements", "Microsoft's rights to OpenAI's intellectual property", "the OpenAI API is exclusive to Azure"],
       "sources": [
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "7", "quote": "Microsoft and OpenAI maintain a long-term strategic partnership originally established in 2019."},
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "1A", "quote": "In January 2023 we announced the third phase of our OpenAI strategic partnership."},
@@ -572,10 +448,6 @@
     "additional_metadata": {
       "id": "aapl-epic",
       "category": "exact_term",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["an injunction bars Apple from prohibiting developers from linking to outside purchasing mechanisms", "Apple implemented a compliance plan on January 16, 2024", "Apple filed a motion to narrow or vacate the injunction on September 30, 2024"],
-      "required_points": ["Epic's lawsuit over Apple's operation of the App Store", "the injunction on links to outside purchasing", "Apple's compliance plan and Epic's challenge to it", "Apple's motion to narrow or vacate the injunction"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "3", "quote": "Epic Games, Inc. (“Epic”) filed a lawsuit in the U.S. District Court for the Northern District of California"},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "3", "quote": "issued an injunction enjoining the Company from prohibiting developers from including in their apps external links that direct customers to purchasing mechanisms other than Apple in-app purchasing"},
@@ -592,10 +464,6 @@
     "additional_metadata": {
       "id": "cmp-cyber-2025",
       "category": "comparison",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Apple: the Head of Corporate Information Security leads cybersecurity risk management, and the Audit Committee assists the Board in oversight", "Microsoft: the Board oversees cybersecurity risk with reviews at least quarterly, and the CISO reports to the EVP of Cloud + AI"],
-      "required_points": ["Apple's approach: the Head of Corporate Information Security and Audit Committee oversight", "Microsoft's approach: Board reviews at least quarterly and the CISO", "a comparison of the two approaches"],
       "sources": [
         {"filing": "AAPL_2025_0000320193-25-000079", "item": "1C", "quote": "The Company’s management, led by its Head of Corporate Information Security, has overall responsibility for identifying, assessing and managing any material risks from cybersecurity threats."},
         {"filing": "AAPL_2025_0000320193-25-000079", "item": "1C", "quote": "has extensive knowledge and skills gained from over 25 years of experience in the cybersecurity industry"},
@@ -616,10 +484,6 @@
     "additional_metadata": {
       "id": "cmp-employees-2024",
       "category": "comparison",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Apple: approximately 164,000", "Microsoft: approximately 228,000", "NVIDIA: approximately 29,600"],
-      "required_points": ["Apple's headcount", "Microsoft's headcount", "NVIDIA's headcount"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1", "quote": "As of September 28, 2024, the Company had approximately 164,000 full-time equivalent employees."},
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "1", "quote": "As of June 30, 2024, we employed approximately 228,000 people on a full-time basis"},
@@ -634,10 +498,6 @@
     "additional_metadata": {
       "id": "cmp-ai-risk-2025",
       "category": "comparison",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Microsoft: emerging AI regulation such as the EU AI Act may increase costs or restrict opportunity", "NVIDIA: restrictions on the hardware and software used for frontier AI, and the EU AI Act may affect training or deploying AI models"],
-      "required_points": ["how Microsoft describes AI regulation risk", "how NVIDIA describes AI regulation risk"],
       "sources": [
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "1A", "quote": "Legislative and regulatory action is emerging in AI, which could increase costs or restrict opportunity."},
         {"filing": "MSFT_2025_0000950170-25-100235", "item": "1A", "quote": "the EU’s AI Act may increase costs or impact the provision or operation of our AI models and services in the European market"},
@@ -657,10 +517,6 @@
     "additional_metadata": {
       "id": "nvda-datacenter-trend",
       "category": "comparison",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["fiscal 2024 Data Center revenue was $47.5 billion, up 217%", "fiscal 2026 Data Center revenue was up 68%, with Blackwell the majority of it", "the description shifted toward total cost of ownership and rack-scale systems"],
-      "required_points": ["how NVIDIA described Data Center in fiscal 2024, with its results", "how NVIDIA described Data Center in fiscal 2026, with its results", "what changed between the two"],
       "sources": [
         {"filing": "NVDA_2024_0001045810-24-000029", "item": "1", "quote": "delivering significantly better performance and power efficiency relative to conventional CPU-only approaches"},
         {"filing": "NVDA_2024_0001045810-24-000029", "item": "7", "quote": "Data Center revenue for fiscal year 2024 was $47.5 billion, up 217% from fiscal year 2023."},
@@ -681,10 +537,6 @@
     "additional_metadata": {
       "id": "fu-msft-supply-chain-2024",
       "category": "follow_up",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["limited suppliers for certain device and datacenter components", "hardware is assembled in Asia and other geographies that may face supply chain disruptions"],
-      "required_points": ["limited suppliers for device and datacenter components", "shortages leading to reduced sales or inadequate datacenter capacity", "hardware assembled in Asia and other geographies that may face disruptions"],
       "sources": [
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "1A", "quote": "There are limited suppliers for certain device and datacenter components."},
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "1A", "quote": "Capacity available to us may be affected as competitors use some of the same suppliers and materials for hardware components."},
@@ -702,10 +554,6 @@
     "additional_metadata": {
       "id": "fu-nvda-china-risks-2025",
       "category": "follow_up",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["U.S. export controls limit NVIDIA's offerings and sales in China", "geopolitical tensions involving Taiwan and China", "Chinese government actions could restrict NVIDIA's business in China"],
-      "required_points": ["U.S. export controls", "geopolitical tensions involving Taiwan and China", "actions by the Chinese government"],
       "sources": [
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1A", "quote": "The market in China, where our offerings are limited by export controls, is highly competitive"},
         {"filing": "NVDA_2025_0001045810-25-000023", "item": "1A", "quote": "To date, we have not received licenses to ship these restricted products to China."},
@@ -723,10 +571,6 @@
     "additional_metadata": {
       "id": "fu-aapl-china-2024",
       "category": "follow_up",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["manufacturing is concentrated with outsourcing partners in China mainland and other Asian countries", "tensions between the U.S. and China have led to tariffs and other restrictions"],
-      "required_points": ["manufacturing concentrated in China mainland and other Asian countries", "trade restrictions such as tariffs", "tensions between the U.S. and China"],
       "sources": [
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1A", "quote": "Substantially all of the Company’s manufacturing is performed in whole or in part by outsourcing partners located primarily in China mainland, India, Japan, South Korea, Taiwan and Vietnam"},
         {"filing": "AAPL_2024_0000320193-24-000123", "item": "1A", "quote": "a significant concentration of this manufacturing is currently performed by a small number of outsourcing partners, often in single locations"},
@@ -742,10 +586,6 @@
     "additional_metadata": {
       "id": "fu-msft-gaming-2024",
       "category": "follow_up",
-      "status": "draft",
-      "created_by": "claude-code",
-      "key_facts": ["Gaming revenue increased $6.0 billion or 39%", "Xbox content and services revenue increased 50%, driven by the Activision Blizzard acquisition", "Xbox hardware revenue decreased 13%"],
-      "required_points": ["Gaming revenue increased $6.0 billion or 39%", "Xbox content and services revenue increased 50%, driven by the Activision Blizzard acquisition", "Xbox hardware revenue decreased 13%"],
       "sources": [
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "7", "quote": "Gaming revenue increased $6.0 billion or 39% driven by growth in Xbox content and services."},
         {"filing": "MSFT_2024_0000950170-24-087843", "item": "7", "quote": "Xbox content and services revenue increased 50% driven by 44 points of net impact from the Activision Blizzard acquisition."},

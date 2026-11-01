@@ -1,0 +1,242 @@
+[
+  {
+    "id": "msft-employees-2024",
+    "category": "fact",
+    "input": "How many full-time employees did MSFT have as of June 30, 2024?",
+    "expected_output": "As of June 30, 2024, Microsoft employed approximately 228,000 people on a full-time basis."
+  },
+  {
+    "id": "aapl-employees-2024",
+    "category": "fact",
+    "input": "How many full-time equivalent employees did AAPL have at the end of fiscal 2024?",
+    "expected_output": "As of September 28, 2024, the end of its fiscal 2024, Apple had approximately 164,000 full-time equivalent employees."
+  },
+  {
+    "id": "nvda-employees-2025",
+    "category": "fact",
+    "input": "How many employees did NVDA have at the end of fiscal year 2025?",
+    "expected_output": "As of the end of fiscal year 2025, NVIDIA had approximately 36,000 employees."
+  },
+  {
+    "id": "aapl-hq-2024",
+    "category": "fact",
+    "input": "Where is AAPL headquartered and did it own or lease its facilities in fiscal 2024?",
+    "expected_output": "Apple's headquarters is located in Cupertino, California. As of September 28, 2024, Apple both owned and leased its facilities and land."
+  },
+  {
+    "id": "msft-hq-2024",
+    "category": "fact",
+    "input": "Where were MSFT's corporate headquarters located in FY2024, and how much space did it have there?",
+    "expected_output": "Microsoft's corporate headquarters are located in Redmond, Washington. Microsoft has approximately 15 million square feet of space in King County, Washington."
+  },
+  {
+    "id": "nvda-hq-2025",
+    "category": "fact",
+    "input": "Where is NVDA headquartered?",
+    "expected_output": "NVIDIA's headquarters is in Santa Clara, California."
+  },
+  {
+    "id": "aapl-buyback-2024",
+    "category": "fact",
+    "input": "How much did AAPL spend repurchasing its common stock in fiscal 2024?",
+    "expected_output": "During fiscal 2024, Apple repurchased $95.0 billion of its common stock."
+  },
+  {
+    "id": "msft-dividend-2025",
+    "category": "fact",
+    "input": "What quarterly dividend per share did MSFT declare in fiscal year 2025?",
+    "expected_output": "In fiscal year 2025, Microsoft's Board of Directors declared a quarterly dividend of $0.83 per share."
+  },
+  {
+    "id": "nvda-fiscal-year-2025",
+    "category": "fact",
+    "input": "When does NVDA's fiscal year end, and how many weeks was fiscal year 2025?",
+    "expected_output": "NVIDIA operates on a 52- or 53-week fiscal year that ends on the last Sunday in January. Fiscal year 2025 was a 52-week year."
+  },
+  {
+    "id": "aapl-auditor-2024",
+    "category": "fact",
+    "input": "Who is AAPL's independent registered public accounting firm?",
+    "expected_output": "Apple's independent registered public accounting firm is Ernst & Young LLP."
+  },
+  {
+    "id": "msft-auditor-2024",
+    "category": "fact",
+    "input": "Which accounting firm audits MSFT's financial statements?",
+    "expected_output": "Microsoft's financial statements are audited by Deloitte & Touche LLP, an independent registered public accounting firm."
+  },
+  {
+    "id": "aapl-supply-chain-2024",
+    "category": "qualitative",
+    "input": "What supply chain risks does AAPL describe in its FY2024 10-K?",
+    "expected_output": "Substantially all of Apple's manufacturing is performed by outsourcing partners located primarily in China mainland, India, Japan, South Korea, Taiwan and Vietnam, with a significant concentration among a small number of partners, often in single locations. Apple obtains certain components from single or limited sources, which exposes it to significant supply and pricing risks, and its new products often use custom components available from only one source. Restrictions on international trade such as tariffs and export controls, as well as natural disasters, geopolitical events, public health issues and industrial accidents, can disrupt its supply chain."
+  },
+  {
+    "id": "msft-ai-risks-2025",
+    "category": "qualitative",
+    "input": "What risks does MSFT describe related to its AI products and services in FY2025?",
+    "expected_output": "Microsoft says AI is a highly competitive and rapidly evolving market, and it is incurring significant costs to build and maintain AI infrastructure, which reduces operating margins. Flawed AI algorithms, biased or inaccurate datasets, or harmful AI-generated content could lead to legal liability, regulatory action, or reputational or competitive harm, and its AI systems may be used in unintended, inappropriate or abusive ways. Emerging AI regulation, such as the EU's AI Act, may increase costs or restrict opportunities, and Microsoft faces intellectual property claims arising from AI training and output."
+  },
+  {
+    "id": "nvda-export-controls-2025",
+    "category": "qualitative",
+    "input": "How do U.S. export controls affect NVDA's ability to sell to China in fiscal 2025?",
+    "expected_output": "U.S. export controls require licenses for exports of NVIDIA's high-performance data center products to China, including the A100 and H100, and Blackwell systems also require a license; NVIDIA has not received licenses to ship these restricted products to China. NVIDIA ramped new products designed for China that do not require an export license. Its Data Center revenue in China grew in fiscal 2025 but, as a share of Data Center revenue, remains well below levels before the October 2023 controls. NVIDIA says the export controls have harmed its competitive position."
+  },
+  {
+    "id": "aapl-competition-2024",
+    "category": "qualitative",
+    "input": "How does AAPL describe the competition it faces in fiscal 2024?",
+    "expected_output": "Apple describes its markets as highly competitive, with aggressive price competition and downward pressure on gross margins, frequent introduction of new products, short product life cycles and rapid adoption of technological advances by competitors. Competitors imitate Apple's products and infringe its intellectual property, and some have broader product lines, lower-priced products and a larger installed base, while Apple has a minority market share in the global smartphone, personal computer and tablet markets. Apple's ability to compete depends on the timely introduction of innovative products, services and technologies, and it designs and develops nearly the entire solution for its products."
+  },
+  {
+    "id": "msft-cyber-2025",
+    "category": "qualitative",
+    "input": "How does MSFT govern and manage cybersecurity risk in FY2025?",
+    "expected_output": "Microsoft says protecting its computing environment is its top corporate priority, and it launched the Secure Future Initiative (SFI) in November 2023. It assesses its cybersecurity program's alignment with the NIST Cybersecurity Framework and tests it through exercises such as penetration tests and red team exercises. The Board of Directors oversees cybersecurity risk, with reviews scheduled at least quarterly. Microsoft's CISO leads cybersecurity and reports to the EVP of Cloud + AI, supported by a Cybersecurity Governance Council of Deputy CISOs."
+  },
+  {
+    "id": "nvda-cyber-2025",
+    "category": "qualitative",
+    "input": "How does NVDA manage cybersecurity risk according to its fiscal 2025 10-K?",
+    "expected_output": "NVIDIA's information security program generally follows frameworks such as the ISO 27001 standard, and cybersecurity risk management is integrated into its overall risk management processes. It consults external cybersecurity experts, maintains cybersecurity training and policies, and assesses the risk of vendors with access to sensitive information. The Board of Directors oversees information security risks, and the Audit Committee reviews its information security policies, practices and controls. A cross-functional executive leadership team regularly reviews cybersecurity matters, and NVIDIA's Chief Security Officer reports to the Senior Vice President of Software Engineering."
+  },
+  {
+    "id": "aapl-legal-2024",
+    "category": "qualitative",
+    "input": "What legal proceedings does AAPL describe in fiscal 2024?",
+    "expected_output": "Apple describes several legal proceedings. In March 2024, the European Commission opened formal noncompliance investigations against Apple under the Digital Markets Act, and in June 2024 it issued preliminary findings that Apple's App Store rules breach the DMA. On March 21, 2024, the U.S. Department of Justice and a number of state attorneys general filed a civil antitrust lawsuit alleging that Apple monopolized or attempted to monopolize smartphone markets. In the Epic Games case, a court issued an injunction barring Apple from prohibiting developers from linking to purchasing mechanisms other than Apple in-app purchasing. Apple is also subject to other legal proceedings arising in the ordinary course of business."
+  },
+  {
+    "id": "msft-segments-2024",
+    "category": "qualitative",
+    "input": "What are MSFT's reportable segments in FY2024?",
+    "expected_output": "In fiscal year 2024, Microsoft reported three segments: Productivity and Business Processes, Intelligent Cloud, and More Personal Computing."
+  },
+  {
+    "id": "nvda-segments-2025",
+    "category": "qualitative",
+    "input": "What are NVDA's reportable segments in fiscal 2025?",
+    "expected_output": "NVIDIA has two operating segments: Compute & Networking and Graphics."
+  },
+  {
+    "id": "aapl-gross-margin-2024",
+    "category": "qualitative",
+    "input": "What affected AAPL's gross margin in fiscal 2024?",
+    "expected_output": "Apple's total gross margin percentage was 46.2% in fiscal 2024, up from 44.1% in 2023. Products gross margin increased due to cost savings, partially offset by a different Products mix and weakness in foreign currencies relative to the U.S. dollar. Services gross margin increased due primarily to higher Services net sales, and the Services gross margin percentage increased due to a different Services mix."
+  },
+  {
+    "id": "msft-cloud-growth-2025",
+    "category": "qualitative",
+    "input": "What drove Microsoft Cloud revenue growth in FY2025?",
+    "expected_output": "Microsoft Cloud revenue increased 23% to $168.9 billion in fiscal year 2025. Growth was led by Azure and other cloud services, whose revenue grew 34% driven by demand for Microsoft's portfolio of services. Microsoft 365 Commercial cloud revenue grew 15%, and Dynamics 365 revenue grew 19%."
+  },
+  {
+    "id": "nvda-datacenter-2025",
+    "category": "qualitative",
+    "input": "What drove NVDA's Data Center revenue growth in fiscal 2025?",
+    "expected_output": "NVIDIA's Data Center revenue for fiscal year 2025 was up 142%, driven by demand for its Hopper architecture accelerated computing platform used for large language models, recommendation engines and generative AI applications. Data Center computing revenue grew 162%, and Data Center networking revenue grew 51%."
+  },
+  {
+    "id": "nvda-customers-2025",
+    "category": "qualitative",
+    "input": "Does NVDA depend on a small number of customers for its revenue in fiscal 2025?",
+    "expected_output": "Yes. NVIDIA says it receives a significant amount of its revenue from a limited number of customers. In fiscal year 2025, sales to direct Customers A, B and C represented 12%, 11% and 11% of total revenue, respectively, and an indirect customer is estimated to represent 10% or more of total revenue."
+  },
+  {
+    "id": "nvda-cuda",
+    "category": "exact_term",
+    "input": "What does NVDA disclose about CUDA in its fiscal 2025 10-K?",
+    "expected_output": "NVIDIA introduced the CUDA programming model in 2006, opening the parallel processing capabilities of its GPUs to a broad range of compute-intensive applications. CUDA is the foundational programming model of NVIDIA's full stack and runs on all NVIDIA GPUs, and together with the CUDA-X collection of acceleration libraries it makes NVIDIA a full-stack computing platform. Over 5.9 million developers use CUDA and NVIDIA's other software tools."
+  },
+  {
+    "id": "nvda-blackwell-2025",
+    "category": "exact_term",
+    "input": "What does NVDA say about the Blackwell architecture in fiscal 2025?",
+    "expected_output": "In fiscal year 2025, NVIDIA launched the Blackwell architecture, a full set of data center scale infrastructure built for generative AI and accelerated computing, and began shipping Blackwell production systems in the fourth quarter of fiscal year 2025. It also launched the Blackwell GeForce RTX 50 Series GPUs. Gross margins in the second quarter of fiscal year 2025 were negatively impacted by inventory provisions for low-yielding Blackwell material, and Blackwell systems require export licenses for shipments to China and certain other countries."
+  },
+  {
+    "id": "msft-activision",
+    "category": "exact_term",
+    "input": "Which company completed the acquisition of Activision Blizzard, and when?",
+    "expected_output": "Microsoft completed its acquisition of Activision Blizzard on October 13, 2023."
+  },
+  {
+    "id": "aapl-vision-pro",
+    "category": "exact_term",
+    "input": "Who mentions the Vision Pro?",
+    "expected_output": "Apple mentions the Vision Pro in its 10-K filings."
+  },
+  {
+    "id": "aapl-dma",
+    "category": "exact_term",
+    "input": "What does AAPL say about the Digital Markets Act in fiscal 2024?",
+    "expected_output": "Apple says it has made changes in the EU to comply with the Digital Markets Act, including new business terms, alternative app distribution and alternative payment processing, which could materially adversely affect its business through reduced App Store sales or reductions in the commission rate it retains. The European Commission opened formal noncompliance investigations against Apple under the DMA in March 2024 and in June 2024 issued preliminary findings that Apple's App Store rules breach the DMA. If the Commission finds a violation, it can impose fines of up to 10% of Apple's annual worldwide net sales."
+  },
+  {
+    "id": "msft-copilot-2025",
+    "category": "exact_term",
+    "input": "How does MSFT describe Microsoft 365 Copilot in FY2025?",
+    "expected_output": "Microsoft describes Microsoft 365 Copilot as part of Microsoft 365 Commercial, an AI-powered business and productivity solutions platform. Microsoft says it uses Microsoft 365 Copilot and agents to provide substantive productivity gains."
+  },
+  {
+    "id": "msft-openai",
+    "category": "exact_term",
+    "input": "What does MSFT disclose about its partnership with and investment in OpenAI in FY2025?",
+    "expected_output": "Microsoft and OpenAI have a long-term strategic partnership originally established in 2019. Microsoft is a major investor in OpenAI, the two companies have reciprocal revenue-sharing arrangements, and Microsoft holds rights to OpenAI's intellectual property for integration into its products. The OpenAI API is exclusive to Azure."
+  },
+  {
+    "id": "aapl-epic",
+    "category": "exact_term",
+    "input": "What does AAPL disclose about the Epic Games litigation in fiscal 2024?",
+    "expected_output": "Epic Games sued Apple, alleging violations of antitrust and unfair competition laws based on Apple's operation of its App Store. The court found that certain App Store guidelines violate California's unfair competition law and issued an injunction barring Apple from prohibiting developers from linking to purchasing mechanisms other than Apple in-app purchasing. On January 16, 2024, Apple implemented a plan to comply with the injunction, which Epic disputes, and on September 30, 2024, Apple filed a motion to narrow or vacate the injunction."
+  },
+  {
+    "id": "cmp-cyber-2025",
+    "category": "comparison",
+    "input": "Compare how AAPL and MSFT describe their cybersecurity governance in 2025.",
+    "expected_output": "At Apple, management led by its Head of Corporate Information Security has overall responsibility for managing material cybersecurity risks, and its Audit and Finance Committee assists the Board in overseeing cybersecurity. At Microsoft, the Board of Directors oversees cybersecurity risk directly, with reviews scheduled at least quarterly, and the CISO leads cybersecurity and reports to the EVP of Cloud + AI. In short, Apple's board-level oversight runs through its Audit Committee, while Microsoft's full Board reviews cybersecurity at least quarterly."
+  },
+  {
+    "id": "cmp-employees-2024",
+    "category": "comparison",
+    "input": "How many employees did AAPL, MSFT and NVDA each report in 2024?",
+    "expected_output": "Apple reported approximately 164,000 full-time equivalent employees at the end of its fiscal 2024. Microsoft reported approximately 228,000 people employed on a full-time basis at the end of its fiscal year 2024. NVIDIA reported approximately 29,600 employees at the end of its fiscal year 2024."
+  },
+  {
+    "id": "cmp-ai-risk-2025",
+    "category": "comparison",
+    "input": "How do MSFT and NVDA each describe risks from AI regulation in 2025?",
+    "expected_output": "Microsoft says emerging AI legislation and regulation, such as the EU's AI Act, could increase its costs or restrict its opportunities, including how it provides or operates its AI models and services in Europe. NVIDIA says governments are considering, and in some cases have imposed, restrictions on the hardware, software and systems used to develop frontier AI models; that the EU AI Act may affect its ability to train, deploy or release AI models in the EU; and that U.S. state AI regulations could raise its compliance costs. NVIDIA says such restrictions could increase costs and delay or halt deployment of new systems using its products."
+  },
+  {
+    "id": "nvda-datacenter-trend",
+    "category": "comparison",
+    "input": "How did NVDA's description of its Data Center business change between FY2024 and FY2026?",
+    "expected_output": "In fiscal 2024, NVIDIA described its Data Center platform as accelerating compute-intensive workloads such as AI, data analytics, graphics and scientific computing, with better performance and power efficiency than CPU-only approaches; Data Center revenue was $47.5 billion, up 217%. By fiscal 2026, the description emphasizes superior total cost of ownership, adds data processing and robotics workloads, and says its offerings are typically delivered as rack-scale systems; Data Center revenue grew 68%, with Blackwell architectures representing the majority of Data Center revenue. The emphasis shifted from accelerating workloads compared with CPUs to total cost of ownership and rack-scale systems."
+  },
+  {
+    "id": "fu-msft-supply-chain-2024",
+    "category": "follow_up",
+    "input": "What supply chain risks does MSFT describe in its FY2024 10-K?",
+    "expected_output": "Microsoft says there are limited suppliers for certain device and datacenter components. If components are delayed or unavailable, it may not obtain timely replacements, resulting in reduced sales or inadequate datacenter capacity. Its datacenter servers, Xbox consoles, Surface devices and other hardware are assembled in Asia and other geographies that may be subject to supply chain disruptions."
+  },
+  {
+    "id": "fu-nvda-china-risks-2025",
+    "category": "follow_up",
+    "input": "Which of NVDA's fiscal 2025 risk factors relate to China?",
+    "expected_output": "Several of NVIDIA's fiscal 2025 risk factors relate to China. U.S. export controls require licenses to ship high-performance products such as the A100, H100 and Blackwell systems to China, and NVIDIA has not received such licenses. Geopolitical tensions involving Taiwan and China, where it has critical suppliers and manufacturing partners, could have a material adverse impact. The Chinese government may restrict gaming, encourage customers to buy from China-based competitors, or restrict the use of some NVIDIA data center products."
+  },
+  {
+    "id": "fu-aapl-china-2024",
+    "category": "follow_up",
+    "input": "What risks related to China does AAPL describe in fiscal 2024?",
+    "expected_output": "Apple's fiscal 2024 risk factors tie China mainly to manufacturing and trade. Substantially all of Apple's manufacturing is performed by outsourcing partners located primarily in China mainland and other Asian countries. Restrictions on international trade, such as tariffs, can materially adversely affect its business and supply chain. Tensions between governments, including the U.S. and China, have led to tariffs and other restrictions affecting Apple's business, and further escalation could lead to more severe actions."
+  },
+  {
+    "id": "fu-msft-gaming-2024",
+    "category": "follow_up",
+    "input": "How did MSFT's gaming revenue change in FY2024?",
+    "expected_output": "In fiscal year 2024, Microsoft's Gaming revenue increased $6.0 billion or 39%. Xbox content and services revenue increased 50%, driven by 44 points of net impact from the Activision Blizzard acquisition, and Xbox hardware revenue decreased 13%."
+  }
+]

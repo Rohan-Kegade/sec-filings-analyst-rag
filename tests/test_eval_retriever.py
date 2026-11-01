@@ -151,9 +151,9 @@ class FakeMetric:
 
 
 GOLDENS = [
-    Golden(id="a", category="fact", status="approved", input="Q a", expected_output="A a"),
-    Golden(id="b", category="fact", status="draft", input="Q b", expected_output="A b"),
-    Golden(id="c", category="comparison", status="draft", input="Q c", expected_output="A c"),
+    Golden(id="a", category="fact", input="Q a", expected_output="A a"),
+    Golden(id="b", category="fact", input="Q b", expected_output="A b"),
+    Golden(id="c", category="comparison", input="Q c", expected_output="A c"),
 ]
 
 
@@ -183,7 +183,7 @@ def test_run_scores_each_golden_and_records_errors():
     assert summary["precision"] == pytest.approx(0.8)  # the failed case is left out
     assert summary["precision_errors"] == 1
     assert result["by_category"]["hybrid"]["fact"]["recall"] == pytest.approx(0.75)
-    assert result["goldens"] == {"total": 3, "approved": 1}
+    assert result["goldens"] == {"total": 3}
     rows = {r["id"]: r for r in result["cases"]["hybrid"]}
     assert rows["c"]["precision"]["error"] == "judge failed"
     assert len(rows["a"]["retrieved"]) == 3

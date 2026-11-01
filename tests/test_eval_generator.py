@@ -21,7 +21,7 @@ def golden(gid="g1", behavior="answer", context=None, chunk_ids=None):
         "Microsoft Corporation (MSFT) 10-K FY2024 - Item 1: Business\n\nWe employed 228,000.",
     )
     return GeneratorGolden(
-        id=gid, category="fact", stress=None, expected_behavior=behavior, status="draft",
+        id=gid, category="fact", stress=None, expected_behavior=behavior,
         input=f"Question {gid}?", context=tuple(context),
         context_chunks=tuple(chunk_ids or ["0000950170-24-087843-1-20"]), expected_output="",
     )  # fmt: skip

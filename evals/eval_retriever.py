@@ -38,7 +38,6 @@ GOLDENS_FILE = GOLDENS_DIR / "retrieval_goldens.json"
 class Golden:
     id: str
     category: str
-    status: str
     input: str
     expected_output: str
 
@@ -51,7 +50,6 @@ def load_goldens(path: Path = GOLDENS_FILE) -> list[Golden]:
             Golden(
                 id=meta["id"],
                 category=meta["category"],
-                status=meta.get("status", "draft"),
                 input=raw["input"],
                 expected_output=raw["expected_output"],
             )
@@ -126,7 +124,6 @@ async def evaluate_mode(
         {
             "id": golden.id,
             "category": golden.category,
-            "status": golden.status,
             "latency_ms": latency,
             "retrieved": [
                 f"{rc.chunk.ticker} FY{rc.chunk.fiscal_year} Item {rc.chunk.item} "
@@ -178,10 +175,7 @@ def run(
             "rrf_k": settings.rrf_k,
             "git_commit": git_commit(),
         },
-        "goldens": {
-            "total": len(goldens),
-            "approved": sum(g.status == "approved" for g in goldens),
-        },
+        "goldens": {"total": len(goldens)},
         "summary": {mode: summarize(rows) for mode, rows in results.items()},
         "by_category": {
             mode: {c: summarize([r for r in rows if r["category"] == c]) for c in categories}
@@ -220,7 +214,7 @@ def _retrievers(modes: list[str]) -> dict:
 def print_report(result: dict) -> None:
     s, g = result["settings"], result["goldens"]
     typer.echo(
-        f"Goldens: {g['total']} ({g['approved']} approved) | k={s['k']} | judge {s['judge']}"
+        f"Goldens: {g['total']} | k={s['k']} | judge {s['judge']}"
     )
     typer.echo(f"\n{'mode':>8} {'recall':>8} {'precision':>10} {'errors':>7} {'ms':>6}")
     for mode, m in result["summary"].items():
@@ -256,7 +250,6 @@ def run_command(
     limit: int = typer.Option(0, help="Only the first N goldens (0 = all)"),
     category: list[str] = typer.Option(None, help="Only these categories"),
     id: list[str] = typer.Option(None, help="Only these golden ids"),
-    approved_only: bool = typer.Option(False, help="Only goldens marked approved"),
     judge_model: str = typer.Option(
         DEFAULT_JUDGE_MODEL, help="Claude model used as judge (default: SEC_RAG_JUDGE_MODEL)"
     ),
@@ -275,7 +268,6 @@ def run_command(
         gold for gold in goldens
         if (not category or gold.category in category)
         and (not id or gold.id in id)
-        and (not approved_only or gold.status == "approved")
     ]  # fmt: skip
     if limit:
         goldens = goldens[:limit]

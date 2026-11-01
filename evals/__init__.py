@@ -2,7 +2,7 @@
 
     1. component    eval_retriever, eval_generator
     2. pipeline     eval_rag_triad
-    3. application  quality:    eval_correctness_completeness (style: skipped)
+    3. application  quality:    eval_application (style: skipped)
                     safety:     eval_scope_adherence (toxicity, leakage: TODO)
                     operations: latency, cost, tokens (TODO)
     4. regression   the whole suite against a previous run (TODO)

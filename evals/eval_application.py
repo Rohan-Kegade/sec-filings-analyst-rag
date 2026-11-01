@@ -1,19 +1,20 @@
 """Correctness and completeness evals (application quality), with DeepEval G-Eval.
 
-Each golden's question goes through the real pipeline once, and every selected metric scores
-the same answers, so results are comparable and generation is paid for once:
-  correctness   key facts stated correctly, with no contradictions (plus a free number check)
-  completeness  everything the question asks for is covered (coverage only)
+Each golden (goldens/application_goldens.json) is a question and a reference answer that states
+only what the question asks for. The question goes through the real pipeline once, and every
+selected metric scores the same answers, so results are comparable and generation is paid for
+once. Both judges compare the answer with the reference answer:
+  correctness   is what the answer states accurate? (missing facts are completeness's job)
+  completeness  does the answer cover everything in the reference? (accuracy is correctness's)
 
-    python -m evals.eval_correctness_completeness run   # both metrics, 40 goldens
-    python -m evals.eval_correctness_completeness run --metric completeness --category qualitative
-    python -m evals.eval_correctness_completeness compare
+    python -m evals.eval_application run   # both metrics, 40 goldens
+    python -m evals.eval_application run --metric completeness --category qualitative
+    python -m evals.eval_application compare
 """
 
 import asyncio
 import json
 import logging
-import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -35,57 +36,48 @@ from sec_rag.pipeline import RAGPipeline
 
 # --- goldens ---------------------------------------------------------------------------------
 
-RETRIEVAL_GOLDENS = GOLDENS_DIR / "retrieval_goldens.json"
+APPLICATION_GOLDENS = GOLDENS_DIR / "application_goldens.json"
 
 
 @dataclass(frozen=True)
 class AppGolden:
     id: str
     category: str
-    status: str
     input: str
-    expected_output: str
-    key_facts: tuple[str, ...]  # what must be right (correctness)
-    required_points: tuple[str, ...] = ()  # what must be covered (completeness)
+    expected_output: str  # the reference answer: only what the question asks for
 
 
-def load_goldens(path: Path = RETRIEVAL_GOLDENS) -> list[AppGolden]:
-    goldens = []
-    for raw in json.loads(path.read_text(encoding="utf-8")):
-        meta = raw["additional_metadata"]
-        goldens.append(AppGolden(
-            id=meta["id"], category=meta["category"], status=meta.get("status", "draft"),
-            input=raw["input"], expected_output=raw["expected_output"],
-            key_facts=tuple(meta["key_facts"]), required_points=tuple(meta["required_points"]),
-        ))  # fmt: skip
+def load_goldens(path: Path = APPLICATION_GOLDENS) -> list[AppGolden]:
+    goldens = [
+        AppGolden(id=raw["id"], category=raw["category"], input=raw["input"],
+                  expected_output=raw["expected_output"])
+        for raw in json.loads(path.read_text(encoding="utf-8"))
+    ]  # fmt: skip
     ids = [g.id for g in goldens]
     duplicates = sorted({i for i in ids if ids.count(i) > 1})
     if duplicates:
-        raise ValueError(f"Duplicate golden ids: {duplicates}")
+        raise ValueError(f"Duplicate golden ids in {path.name}: {duplicates}")
     return goldens
 
 
 # --- correctness -----------------------------------------------------------------------------
 
 CORRECTNESS_STEPS = [
-    "Read the question, the expected output (a reference answer based on the company's 10-K "
-    "filing) and the key facts listed at its end.",
-    "For each key fact, check whether the actual output states it correctly. Equivalent "
-    "wording, rounding and units are fine (for example 'about 228,000' matches "
-    "'approximately 228,000'). A key fact that is missing counts against correctness.",
+    "Read the question and the expected output: a reference answer stating what the company's "
+    "10-K filing says in answer to this question.",
+    "Check each fact the actual output states that the expected output also covers (figures, "
+    "dates, fiscal years, companies, names, events). Equivalent wording, rounding and units "
+    "are fine (for example 'about 228,000' matches 'approximately 228,000').",
     "Heavily penalize any statement that contradicts the expected output, or that gives a "
-    "wrong number, date, fiscal year or company for a key fact.",
+    "wrong number, date, fiscal year or company.",
+    "Do not penalize facts from the expected output that the actual output leaves out; "
+    "completeness is evaluated separately. Judge only whether what the actual output states "
+    "is accurate.",
     "Do not penalize additional details that the expected output does not mention, unless "
     "they contradict it.",
+    "If the actual output states none of the facts in the expected output (for example it "
+    "says the information is not available), give the lowest score.",
 ]
-
-_NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
-
-
-def expected_with_key_facts(golden: AppGolden) -> str:
-    """The reference answer followed by its key facts, as the judge sees it."""
-    facts = "\n".join(f"- {fact}" for fact in golden.key_facts)
-    return f"{golden.expected_output}\n\nKey facts:\n{facts}"
 
 
 def correctness_metric(judge: DeepEvalBaseLLM) -> GEval:
@@ -101,43 +93,22 @@ def correctness_metric(judge: DeepEvalBaseLLM) -> GEval:
     )
 
 
-def _normalize_number(token: str) -> str:
-    token = token.replace(",", "")
-    return token[:-2] if token.endswith(".0") else token  # "$95.0 billion" == "$95 billion"
-
-
-def key_numbers(golden: AppGolden) -> set[str]:
-    return {_normalize_number(n) for fact in golden.key_facts for n in _NUMBER.findall(fact)}
-
-
-def number_check(golden: AppGolden, answer: str | None) -> tuple[int, int]:
-    """(numbers from the key facts found in the answer, total). A free, exact pre-check."""
-    expected = key_numbers(golden)
-    found = {_normalize_number(n) for n in _NUMBER.findall(answer or "")}
-    return len(expected & found), len(expected)
-
-
 # --- completeness ----------------------------------------------------------------------------
 
 COMPLETENESS_STEPS = [
-    "Read the question and the required points listed in the expected output: everything a "
+    "Read the question and the expected output: a reference answer containing everything a "
     "complete answer to this question must cover.",
-    "For each required point, decide whether the actual output covers it fully, partly or "
-    "not at all. Wording does not matter, only whether the point is addressed.",
-    "The score reflects the share of required points covered; partly covered points count "
-    "for less than fully covered ones.",
+    "Break the expected output into the distinct points it makes. For each point, decide "
+    "whether the actual output covers it fully, partly or not at all. Wording does not "
+    "matter, only whether the point is addressed.",
+    "The score reflects the share of points covered; partly covered points count for less "
+    "than fully covered ones.",
     "Do not judge whether figures or claims are accurate; correctness is evaluated "
     "separately. A point counts as covered if the answer addresses it.",
-    "Do not penalize additional details beyond the required points.",
+    "Do not penalize additional details beyond the expected output.",
     "If the answer says the information for a point is not available instead of covering "
     "it, count that point as not covered.",
 ]
-
-
-def expected_with_points(golden: AppGolden) -> str:
-    """The reference answer followed by the required points, as the judge sees it."""
-    points = "\n".join(f"- {point}" for point in golden.required_points)
-    return f"{golden.expected_output}\n\nRequired points:\n{points}"
 
 
 def completeness_metric(judge: DeepEvalBaseLLM) -> GEval:
@@ -159,49 +130,30 @@ RUN_KIND = "app"  # saved under evals/runs/app/
 PASS = 0.7  # a score at or above this counts as a pass
 
 
-@dataclass(frozen=True)
-class AppMetric:
-    """One application metric: its judge, the expected output it sees, and where it applies."""
-
-    build: Callable[[DeepEvalBaseLLM], object]
-    expected: Callable[[AppGolden], str]
-    applies: Callable[[AppGolden], bool]
-
-
-METRICS = {
-    "correctness": AppMetric(
-        build=correctness_metric,
-        expected=expected_with_key_facts,
-        applies=lambda golden: True,
-    ),
-    "completeness": AppMetric(
-        build=completeness_metric,
-        expected=expected_with_points,
-        applies=lambda golden: bool(golden.required_points),
-    ),
+# Metric name -> builds its judge. Every metric sees the same test case: the question, the
+# pipeline's answer and the golden's reference answer.
+MetricBuilder = Callable[[DeepEvalBaseLLM], object]
+METRICS: dict[str, MetricBuilder] = {
+    "correctness": correctness_metric,
+    "completeness": completeness_metric,
 }
 
-NOT_APPLICABLE = {"score": None, "reason": None, "error": None, "applies": False}
 
-
-async def score_all(goldens: list[AppGolden], outputs: list[dict], metrics: dict[str, AppMetric],
-                    judge: DeepEvalBaseLLM, concurrency: int) -> list[dict]:  # fmt: skip
+async def score_all(goldens: list[AppGolden], outputs: list[dict],
+                    metrics: dict[str, MetricBuilder], judge: DeepEvalBaseLLM,
+                    concurrency: int) -> list[dict]:  # fmt: skip
     semaphore = asyncio.Semaphore(concurrency)
 
     async def score(golden: AppGolden, output: dict, name: str) -> dict:
-        metric = metrics[name]
-        if not metric.applies(golden):
-            return NOT_APPLICABLE
         if output["answer"] is None:
-            return {"score": None, "reason": None, "error": output["error"] or "no answer",
-                    "applies": True}  # fmt: skip
+            return {"score": None, "reason": None, "error": output["error"] or "no answer"}
         test_case = LLMTestCase(
             input=golden.input,
             actual_output=output["answer"],
-            expected_output=metric.expected(golden),
+            expected_output=golden.expected_output,
         )
-        scored = await score_case(test_case, {name: metric.build(judge)}, semaphore)
-        return {**scored[name], "applies": True}
+        scored = await score_case(test_case, {name: metrics[name](judge)}, semaphore)
+        return scored[name]
 
     async def score_golden(golden: AppGolden, output: dict) -> dict:
         names = list(metrics)
@@ -218,37 +170,30 @@ def summarize(rows: list[dict], metric_names: list[str]) -> dict:
         summary[name] = {
             "score": mean(scores) if scores else None,
             "passed": sum(s >= PASS for s in scores) / len(scores) if scores else None,
-            "applies": sum(r[name]["applies"] for r in rows),
             "errors": sum(r[name]["error"] is not None for r in rows),
         }
-    if "correctness" in metric_names:
-        found = sum(r["key_numbers_found"] for r in rows)
-        total = sum(r["key_numbers_total"] for r in rows)
-        summary["key_numbers_found"] = found / total if total else None
     return summary
 
 
-def run(pipeline: RAGPipeline, goldens: list[AppGolden], k: int, metrics: dict[str, AppMetric],
-        judge: DeepEvalBaseLLM, concurrency: int, judge_name: str) -> dict:  # fmt: skip
-    """`metrics` maps names to definitions, normally a selection from METRICS."""
+def run(pipeline: RAGPipeline, goldens: list[AppGolden], k: int,
+        metrics: dict[str, MetricBuilder], judge: DeepEvalBaseLLM, concurrency: int,
+        judge_name: str) -> dict:  # fmt: skip
+    """`metrics` maps names to judge builders, normally a selection from METRICS."""
     metric_names = list(metrics)
     outputs = run_pipeline(pipeline, goldens, k, concurrency)
     scores = asyncio.run(score_all(goldens, outputs, metrics, judge, concurrency))
 
     rows = []
     for golden, output, scored in zip(goldens, outputs, scores):
-        found, total = number_check(golden, output["answer"])
         rows.append({
             "id": golden.id,
             "category": golden.category,
-            "status": golden.status,
             "question": golden.input,
+            "reference": golden.expected_output,
             "answer": output["answer"],
             "generation_error": output["error"],
             "sources": [f"{rc.chunk.ticker} FY{rc.chunk.fiscal_year} Item {rc.chunk.item}"
                         for rc in output["sources"]],
-            "key_numbers_found": found,
-            "key_numbers_total": total,
             **scored,
         })  # fmt: skip
 
@@ -266,10 +211,7 @@ def run(pipeline: RAGPipeline, goldens: list[AppGolden], k: int, metrics: dict[s
             "embedding_model": settings.embedding_model,
             "git_commit": git_commit(),
         },
-        "goldens": {
-            "total": len(goldens),
-            "approved": sum(g.status == "approved" for g in goldens),
-        },
+        "goldens": {"total": len(goldens)},
         "summary": summarize(rows, metric_names),
         "by_category": {
             c: summarize([r for r in rows if r["category"] == c], metric_names)
@@ -300,17 +242,15 @@ def print_report(result: dict) -> None:
     s, g, names = result["settings"], result["goldens"], result["metrics"]
     typer.echo(
         f"Pipeline: {s['retrieval_mode']} retrieval, k={s['k']}, generator {s['generator']} | "
-        f"judge {s['judge']} | goldens {g['total']} ({g['approved']} approved)"
+        f"judge {s['judge']} | goldens {g['total']}"
     )
 
     header = " ".join(f"{name[:12]:>12} {'pass':>5}" for name in names)
-    numbers = "correctness" in names
-    typer.echo(f"\n{'category':>13} {'n':>3} {header}" + (f" {'key nums':>9}" if numbers else ""))
+    typer.echo(f"\n{'category':>13} {'n':>3} {header}")
     for category, m in [*result["by_category"].items(), ("ALL", result["summary"])]:
         cells = " ".join(f"{_fmt(m[n]['score']):>12} {_pct(m[n]['passed']):>5}" for n in names)
-        extra = f" {_pct(m['key_numbers_found']):>9}" if numbers else ""
-        typer.echo(f"{category:>13} {m['cases']:>3} {cells}{extra}")
-    typer.echo(f"(pass = score >= {PASS}; '-' where a metric doesn't apply)")
+        typer.echo(f"{category:>13} {m['cases']:>3} {cells}")
+    typer.echo(f"(pass = score >= {PASS})")
 
     errors = sum(result["summary"][n]["errors"] for n in names)
     if errors:
@@ -336,7 +276,6 @@ def run_command(
     limit: int = typer.Option(0, help="Only the first N goldens (0 = all)"),
     category: list[str] = typer.Option(None, help="Only these categories"),
     id: list[str] = typer.Option(None, help="Only these golden ids"),
-    approved_only: bool = typer.Option(False, help="Only goldens marked approved"),
     judge_model: str = typer.Option(
         DEFAULT_JUDGE_MODEL, help="Claude model used as judge (default: SEC_RAG_JUDGE_MODEL)"
     ),
@@ -355,9 +294,7 @@ def run_command(
         raise typer.BadParameter(f"unknown metric(s) {unknown}; choose from {list(METRICS)}")
     goldens = [
         gold for gold in load_goldens()
-        if (not category or gold.category in category)
-        and (not id or gold.id in id)
-        and (not approved_only or gold.status == "approved")
+        if (not category or gold.category in category) and (not id or gold.id in id)
     ]  # fmt: skip
     if limit:
         goldens = goldens[:limit]

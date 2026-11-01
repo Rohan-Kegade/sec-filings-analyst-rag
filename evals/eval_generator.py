@@ -51,7 +51,6 @@ class GeneratorGolden:
     category: str
     stress: str | None
     expected_behavior: str  # "answer" or "abstain"
-    status: str
     input: str
     context: tuple[str, ...]
     context_chunks: tuple[str, ...]
@@ -68,7 +67,6 @@ def load_goldens(path: Path = GOLDENS_FILE) -> list[GeneratorGolden]:
                 category=meta["category"],
                 stress=meta.get("stress"),
                 expected_behavior=meta.get("expected_behavior", "answer"),
-                status=meta.get("status", "draft"),
                 input=raw["input"],
                 context=tuple(raw["context"]),
                 context_chunks=tuple(meta["context_chunks"]),
@@ -199,7 +197,6 @@ def run(
             "category": golden.category,
             "stress": golden.stress,
             "expected_behavior": golden.expected_behavior,
-            "status": golden.status,
             "question": golden.input,
             "answer": generated["answer"],
             "generation_error": generated["error"],
@@ -217,10 +214,7 @@ def run(
             "judge": judge_name,
             "git_commit": git_commit(),
         },
-        "goldens": {
-            "total": len(goldens),
-            "approved": sum(g.status == "approved" for g in goldens),
-        },
+        "goldens": {"total": len(goldens)},
         "summary": summarize(rows),
         "by_category": {c: summarize([r for r in rows if r["category"] == c]) for c in categories},
         "cases": rows,
@@ -247,7 +241,7 @@ def _pct(value) -> str:
 
 def print_report(result: dict) -> None:
     s, g = result["settings"], result["goldens"]
-    typer.echo(f"Goldens: {g['total']} ({g['approved']} approved) | generator {s['generator']} "
+    typer.echo(f"Goldens: {g['total']} | generator {s['generator']} "
                f"| judge {s['judge']}")  # fmt: skip
 
     typer.echo(f"\n{'category':>12} {'n':>3} {'faithful':>9} {'relevant':>9} {'abstained':>10}")
@@ -293,7 +287,6 @@ def run_command(
     limit: int = typer.Option(0, help="Only the first N goldens (0 = all)"),
     category: list[str] = typer.Option(None, help="Only these categories"),
     id: list[str] = typer.Option(None, help="Only these golden ids"),
-    approved_only: bool = typer.Option(False, help="Only goldens marked approved"),
     judge_model: str = typer.Option(
         DEFAULT_JUDGE_MODEL, help="Claude model used as judge (default: SEC_RAG_JUDGE_MODEL)"
     ),
@@ -312,7 +305,6 @@ def run_command(
         gold for gold in load_goldens()
         if (not category or gold.category in category)
         and (not id or gold.id in id)
-        and (not approved_only or gold.status == "approved")
     ]  # fmt: skip
     if limit:
         goldens = goldens[:limit]

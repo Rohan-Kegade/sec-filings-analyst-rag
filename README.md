@@ -45,13 +45,13 @@ sec-filings-analyst-rag/
 │   ├── api/                   # FastAPI service (queries, conversations, health)
 │   └── cli.py                 # `sec-rag download | index | ask`
 ├── app/streamlit_app.py       # Chat UI with saved conversations
-├── goldens/                   # Eval goldens: retrieval, generator, scope (hand-checked)
+├── goldens/                   # Eval goldens: retrieval, generator, application, scope
 ├── evals/                     # One file per eval (levels: see Evaluation below)
 │   ├── eval_retriever.py      # 1. Contextual Recall / Precision
 │   ├── eval_generator.py      # 1. Faithfulness / Answer Relevancy on frozen contexts
 │   ├── eval_rag_triad.py      # 2. Context relevance, faithfulness, answer relevance
-│   ├── eval_correctness_completeness.py  # 3. Quality: correctness, completeness
-│   ├── eval_scope_adherence.py           # 3. Safety: scope adherence
+│   ├── eval_application.py    # 3. Quality: correctness, completeness
+│   ├── eval_scope_adherence.py  # 3. Safety: scope adherence
 │   ├── judge.py               # ClaudeJudge: Claude as a DeepEval judge model
 │   └── runs.py                # Saving and loading eval runs (evals/runs/, not in git)
 ├── tests/                     # Unit tests (parser, chunker, prompts, chat)
@@ -97,7 +97,7 @@ components up to the whole suite:
 | 1. Component | retriever | `evals/eval_retriever.py` |
 | | generator | `evals/eval_generator.py` |
 | 2. Pipeline | RAG triad: context relevance, faithfulness, answer relevance | `evals/eval_rag_triad.py` |
-| 3. Application | quality: correctness, completeness (style skipped) | `evals/eval_correctness_completeness.py` |
+| 3. Application | quality: correctness, completeness (style skipped) | `evals/eval_application.py` |
 | | safety: scope adherence (toxicity, leakage TODO) | `evals/eval_scope_adherence.py` |
 | | operations: latency, cost, tokens | TODO |
 | 4. Regression | the whole suite against a baseline | TODO |
@@ -180,22 +180,27 @@ excerpt). The judge caps itself at 4 concurrent requests and retries rate limits
 
 #### Quality: correctness and completeness
 
-Runs each golden's question through the full pipeline **once**, then scores the answers with
-each selected metric (DeepEval G-Eval with fixed steps):
+Each of the 40 goldens in `goldens/application_goldens.json` is a question and a reference
+answer that states **only what the question asks for**, e.g. "As of June 30, 2024, Microsoft
+employed approximately 228,000 people on a full-time basis." (The retrieval goldens keep the
+full reference from the filing, with extra detail, for the retriever eval.) Each question runs
+through the full pipeline **once**, then both metrics (DeepEval G-Eval with fixed steps) judge
+that answer against the reference:
 
-| Metric | Golden field | Asks |
+| Metric | Asks | Ignores |
 |---|---|---|
-| **Correctness** | `key_facts`: what must be right | Are the key facts stated correctly, with no wrong numbers, years, companies or contradictions? |
-| **Completeness** | `required_points`: what must be covered | Does the answer cover everything the question asks for? Coverage only; accuracy is correctness's job. |
+| **Correctness** | Is what the answer states accurate: no wrong numbers, years, companies or contradictions? | facts it leaves out |
+| **Completeness** | Does the answer cover everything in the reference? | whether its figures are right |
 
-Neither penalizes extra details beyond the reference. A free code check also reports whether
-the key facts' numbers appear in the answer. The 40 goldens store `key_facts` and
-`required_points` next to their reference answers in `retrieval_goldens.json`.
+So an accurate but partial answer scores high on correctness and low on completeness. An
+answer that gives none of the facts (e.g. "the information isn't available") scores lowest on
+both. Neither penalizes extra details beyond the reference. Tests check that the application
+goldens keep the same questions as the retrieval goldens and add no figures beyond them.
 
 ```bash
-python -m evals.eval_correctness_completeness run      # both metrics, 40 goldens
-python -m evals.eval_correctness_completeness run --metric completeness --category qualitative
-python -m evals.eval_correctness_completeness compare   # last two runs
+python -m evals.eval_application run       # both metrics, 40 goldens
+python -m evals.eval_application run --metric completeness --category qualitative
+python -m evals.eval_application compare   # last two runs
 ```
 
 Correctness is defined by the filings: the reference is what the company's 10-K for that
