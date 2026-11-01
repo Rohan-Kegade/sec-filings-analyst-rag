@@ -20,7 +20,7 @@ from sec_rag.models import Conversation, Source
 
 logger = logging.getLogger(__name__)
 
-GEMINI_UNAVAILABLE = "Couldn't get an answer from Gemini. Please try again in a moment."
+LLM_UNAVAILABLE = "Couldn't get an answer from Claude. Please try again in a moment."
 
 
 @lru_cache
@@ -87,7 +87,7 @@ def query(request: QueryRequest) -> QueryResponse:
         else:
             result = chat.pipeline.ask(request.question, request.filters(), request.top_k)
     except GenerationError as exc:
-        raise HTTPException(status_code=503, detail=f"{GEMINI_UNAVAILABLE} ({exc})") from exc
+        raise HTTPException(status_code=503, detail=f"{LLM_UNAVAILABLE} ({exc})") from exc
     return QueryResponse(
         answer=result.answer,
         standalone_question=result.standalone_question,
@@ -112,7 +112,7 @@ def query_stream(request: QueryRequest) -> StreamingResponse:
         try:
             yield from result.text_stream
         except GenerationError:
-            logger.warning("Gemini failed mid-stream", exc_info=True)
-            yield f"\n\n[error] {GEMINI_UNAVAILABLE}"
+            logger.warning("Claude failed mid-stream", exc_info=True)
+            yield f"\n\n[error] {LLM_UNAVAILABLE}"
 
     return StreamingResponse(stream_with_errors(), media_type="text/plain")

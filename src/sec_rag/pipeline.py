@@ -63,7 +63,7 @@ class RAGPipeline:
         top_k: int = settings.top_k,
         history: list[ChatTurn] | None = None,
     ) -> StreamingAnswer:
-        """Rewrite and retrieve now; Gemini is called lazily as `text_stream` is consumed."""
+        """Rewrite and retrieve now; Claude is called lazily as `text_stream` is consumed."""
         history = (history or [])[-settings.chat_history_turns :]
         standalone, chunks = self._retrieve(question, filters, top_k, history)
         if chunks:

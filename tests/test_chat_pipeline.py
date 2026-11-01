@@ -1,4 +1,4 @@
-"""Pipeline and ChatService behaviour with fake retrieval and a fake Gemini (no API calls)."""
+"""Pipeline and ChatService behaviour with fake retrieval and a fake LLM (no API calls)."""
 
 import pytest
 
@@ -74,7 +74,7 @@ def test_follow_up_is_rewritten_for_retrieval(tmp_path):
     assert [q for q, _ in rewriter.calls] == ["What about MSFT?"]  # only the follow-up
     assert pipeline.retriever.queries[-1] == "standalone: What about MSFT?"
     assert answer.standalone_question == "standalone: What about MSFT?"
-    # Gemini gets the original wording plus the earlier exchange.
+    # The LLM gets the original wording plus the earlier exchange.
     question, history = pipeline.generator.calls[-1]
     assert question == "What about MSFT?"
     assert [t.question for t in history] == ["What risks does AAPL face?"]
@@ -92,7 +92,7 @@ def test_history_is_limited_to_recent_turns(tmp_path):
     assert history[-1].question == f"Question {settings.chat_history_turns}"
 
 
-def test_no_results_skips_gemini():
+def test_no_results_skips_the_llm():
     pipeline, _ = make_pipeline(retriever=FakeRetriever(results=[]))
     result = pipeline.ask_stream("What did XYZ say in 2019?")
     assert "".join(result.text_stream) == NO_RESULTS

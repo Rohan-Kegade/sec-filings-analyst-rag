@@ -9,7 +9,7 @@ description = "RAG pipeline for querying SEC 10-K filings"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "google-genai>=2.34",
+    "anthropic>=2.3",
     "requests>=2.32",
     "beautifulsoup4>=4.12",
     "lxml>=5.0",

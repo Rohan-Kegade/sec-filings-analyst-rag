@@ -1,61 +1,77 @@
-"""Answer generation with Google Gemini (Interactions API)."""
+"""Answer generation with Claude (Anthropic Messages API, streaming)."""
 
 from collections.abc import Iterator
 
-from google import genai
+import anthropic
 
 from sec_rag.config import settings
 from sec_rag.generation.prompts import SYSTEM_PROMPT, build_user_message
 from sec_rag.models import ChatTurn, RetrievedChunk
 
+# Server-side fallback: if a safety classifier declines a request, the API re-runs it on a
+# fallback model chosen for the refusal category, inside the same call.
+FALLBACK_BETA = "server-side-fallback-2026-07-01"
+REFUSAL_MESSAGE = "The model declined to answer this question."
+
 
 class GenerationError(RuntimeError):
-    """A Gemini call failed: model overloaded (503), rate limit, network, bad API key, ..."""
+    """A Claude call failed: overloaded, rate limit, network, bad API key, ..."""
 
 
 class AnswerGenerator:
-    def __init__(self, client: genai.Client | None = None, model: str = settings.llm_model):
-        # GEMINI_API_KEY comes from the environment or .env via settings.
-        self.client = client or genai.Client(api_key=settings.gemini_api_key)
+    def __init__(
+        self, client: anthropic.Anthropic | None = None, model: str = settings.llm_model
+    ):
+        # ANTHROPIC_API_KEY comes from the environment or .env via settings. When unset, the
+        # SDK falls back to its own credential lookup (e.g. an `ant auth login` profile).
+        self.client = client or anthropic.Anthropic(api_key=settings.anthropic_api_key)
         self.model = model
 
-    # The SDK's Interactions API error classes are only exported from a private module,
-    # so any failure inside a Gemini call is re-raised as GenerationError.
+    def _stream(self, system: str, prompt: str, effort: str, max_tokens: int):
+        return self.client.beta.messages.stream(
+            model=self.model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=[{"role": "user", "content": prompt}],
+            thinking={"type": "adaptive"},
+            output_config={"effort": effort},
+            betas=[FALLBACK_BETA],
+            fallbacks="default",
+        )
 
     def complete(
         self,
-        system_instruction: str,
+        system: str,
         prompt: str,
-        thinking_level: str = settings.llm_thinking_level,
+        effort: str = settings.llm_effort,
+        max_tokens: int = settings.llm_max_tokens,
     ) -> str:
         try:
-            interaction = self.client.interactions.create(
-                model=self.model,
-                system_instruction=system_instruction,
-                input=prompt,
-                generation_config={"thinking_level": thinking_level},
-            )
-        except Exception as exc:
+            with self._stream(system, prompt, effort, max_tokens) as stream:
+                message = stream.get_final_message()
+        except anthropic.APIError as exc:
             raise GenerationError(str(exc)) from exc
-        return interaction.output_text or ""
+        if message.stop_reason == "refusal":
+            return REFUSAL_MESSAGE
+        return "".join(block.text for block in message.content if block.type == "text")
 
     def complete_stream(
         self,
-        system_instruction: str,
+        system: str,
         prompt: str,
-        thinking_level: str = settings.llm_thinking_level,
+        effort: str = settings.llm_effort,
+        max_tokens: int = settings.llm_max_tokens,
     ) -> Iterator[str]:
         try:
-            for event in self.client.interactions.create(
-                model=self.model,
-                system_instruction=system_instruction,
-                input=prompt,
-                generation_config={"thinking_level": thinking_level},
-                stream=True,
-            ):
-                if event.event_type == "step.delta" and event.delta.type == "text":
-                    yield event.delta.text
-        except Exception as exc:
+            with self._stream(system, prompt, effort, max_tokens) as stream:
+                produced_text = False
+                for text in stream.text_stream:
+                    produced_text = True
+                    yield text
+                # A refusal that even the fallback model declines ends with no text.
+                if stream.get_final_message().stop_reason == "refusal" and not produced_text:
+                    yield REFUSAL_MESSAGE
+        except anthropic.APIError as exc:
             raise GenerationError(str(exc)) from exc
 
     def generate(

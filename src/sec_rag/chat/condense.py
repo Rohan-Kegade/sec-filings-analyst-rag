@@ -22,7 +22,8 @@ class QuestionRewriter:
             rewritten = self.generator.complete(
                 REWRITE_INSTRUCTIONS,
                 build_rewrite_message(question, history),
-                thinking_level=settings.rewrite_thinking_level,
+                effort=settings.rewrite_effort,
+                max_tokens=settings.rewrite_max_tokens,
             )
         except GenerationError:
             # A failed rewrite shouldn't block the answer; search with the original text.

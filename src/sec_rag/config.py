@@ -32,10 +32,12 @@ class Settings(BaseSettings):
     rrf_k: int = 60
 
     # Generation
-    gemini_api_key: str | None = Field(default=None, validation_alias="GEMINI_API_KEY")
-    llm_model: str = "gemini-3.1-flash-lite"
-    llm_thinking_level: str = "medium"  # low | medium | high
-    rewrite_thinking_level: str = "low"  # for turning follow-ups into standalone questions
+    anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
+    llm_model: str = "claude-opus-5-5"
+    llm_effort: str = "medium"  # low | medium | high | xhigh | max
+    llm_max_tokens: int = 16000
+    rewrite_effort: str = "low"  # for turning follow-ups into standalone questions
+    rewrite_max_tokens: int = 4000
 
     # Chat
     chat_history_turns: int = 3  # earlier question/answer pairs sent with a follow-up

@@ -9,7 +9,7 @@ EDGAR ──► download ──► parse into Items ──► chunk ──► em
                                                                    │
 question ──► rewrite follow-up ──► extract filters ──► vector + keyword search
                (uses chat history)   (ticker/year)          │ merged by rank (RRF)
-                                              top-k chunks ─┴─► Gemini ──► cited answer
+                                              top-k chunks ─┴─► Claude ──► cited answer
                                        + last 3 exchanges ──┘                │
                                                                  saved to data/chats.db
 ```
@@ -36,7 +36,7 @@ sec-filings-analyst-rag/
 │   │   └── retriever.py       # Hybrid (default), dense or keyword search + filters
 │   ├── generation/
 │   │   ├── prompts.py         # System, rewrite and context/history prompts
-│   │   └── llm.py             # Gemini calls (streaming); failures raise GenerationError
+│   │   └── llm.py             # Claude calls (streaming); failures raise GenerationError
 │   ├── chat/
 │   │   ├── store.py           # SQLite chat history: conversations + messages with sources
 │   │   ├── condense.py        # Rewrite follow-ups into standalone questions
@@ -64,7 +64,7 @@ Use Python 3.11–3.13 (PyTorch and ChromaDB wheels may lag behind the newest Py
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (source .venv/bin/activate on macOS/Linux)
 pip install -e ".[ui,dev]"
-copy .env.example .env          # then fill in GEMINI_API_KEY and your EDGAR user agent
+copy .env.example .env          # then fill in ANTHROPIC_API_KEY and your EDGAR user agent
 ```
 
 ## Usage
@@ -96,7 +96,7 @@ product names and codes ("CUDA", "H100", "Vision Pro").
 
 Conversations are saved in `data/chats.db` and survive restarts. Follow-up questions
 ("What about MSFT?") are rewritten into standalone questions before retrieval, and the last
-3 exchanges are sent to Gemini as context (`SEC_RAG_CHAT_HISTORY_TURNS`). An exchange is
+3 exchanges are sent to Claude as context (`SEC_RAG_CHAT_HISTORY_TURNS`). An exchange is
 saved only once its answer finishes, so failed answers aren't kept.
 
 | Endpoint | Purpose |

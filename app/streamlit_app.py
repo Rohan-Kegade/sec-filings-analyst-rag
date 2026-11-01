@@ -98,8 +98,8 @@ if question:
                 result = chat.ask_stream(current_id, question, filters=filters, top_k=top_k)
             render_searched_for(question, result.standalone_question)
             st.write_stream(result.text_stream)  # the exchange is saved when this finishes
-        except GenerationError as exc:  # e.g. Gemini 503 "high demand" or a network error
-            st.error(f"Couldn't get an answer from Gemini. Please try again in a moment.\n\n{exc}")
+        except GenerationError as exc:  # e.g. Claude overloaded, rate limit or a network error
+            st.error(f"Couldn't get an answer from Claude. Please try again in a moment.\n\n{exc}")
             if started_new_chat:  # don't leave an empty chat in the sidebar
                 delete_conversation(current_id)
         else:
