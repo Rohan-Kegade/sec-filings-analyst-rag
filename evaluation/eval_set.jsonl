@@ -1,4 +1,18 @@
 {"question": "What are Apple's main supply chain risk factors?", "ticker": "AAPL", "item": "1A"}
-{"question": "How did Microsoft describe revenue growth in its MD&A?", "ticker": "MSFT", "item": "7"}
-{"question": "What cybersecurity risk management processes does NVIDIA describe?", "ticker": "NVDA", "item": "1C"}
-{"question": "What legal proceedings is Alphabet involved in?", "ticker": "GOOGL", "item": "3"}
+{"question": "How did MSFT describe Azure and other cloud services revenue growth?", "ticker": "MSFT", "item": "7", "term": "Azure"}
+{"question": "What cybersecurity risk management processes does NVDA describe?", "ticker": "NVDA", "item": "1C"}
+{"question": "What legal proceedings does AAPL disclose?", "ticker": "AAPL", "item": "3"}
+{"question": "How many full-time employees does MSFT have?", "ticker": "MSFT", "item": "1"}
+{"question": "What risks do export controls on H100 and other data center GPUs to China pose for NVDA?", "ticker": "NVDA", "item": "1A", "term": "H100"}
+{"question": "How did iPhone net sales change for AAPL?", "ticker": "AAPL", "item": "7", "term": "iPhone"}
+{"question": "What does MSFT say about Xbox content and services revenue?", "ticker": "MSFT", "item": ["7", "8"], "term": "Xbox"}
+{"question": "What interest rate and foreign exchange market risk does NVDA describe?", "ticker": "NVDA", "item": "7A"}
+{"question": "What properties and facilities does AAPL own or lease?", "ticker": "AAPL", "item": "2"}
+{"question": "Who are NVDA's competitors in its markets?", "ticker": "NVDA", "item": ["1", "1A"]}
+{"question": "What does MSFT disclose about its stock repurchase program?", "ticker": "MSFT", "item": ["5", "7", "8"]}
+{"question": "What does NVDA say about the Blackwell architecture?", "term": "Blackwell"}
+{"question": "What does AAPL say about the Digital Markets Act?", "term": "Digital Markets Act"}
+{"question": "How does MSFT describe GitHub Copilot?", "term": "Copilot"}
+{"question": "What does NVDA disclose about CUDA?", "term": "CUDA"}
+{"question": "Which company discusses the Activision Blizzard acquisition?", "term": "Activision"}
+{"question": "Who mentions the Vision Pro?", "term": "Vision Pro"}

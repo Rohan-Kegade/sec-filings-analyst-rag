@@ -5,8 +5,10 @@ Ask natural-language questions about companies' SEC 10-K filings and get answers
 ```
 EDGAR ──► download ──► parse into Items ──► chunk ──► embed ──► ChromaDB
                                                                    │
-question ──► rewrite follow-up ──► extract filters ──► vector search ◄──┘
-               (uses chat history)   (ticker/year)          │
+                                                         + keyword index (BM25)
+                                                                   │
+question ──► rewrite follow-up ──► extract filters ──► vector + keyword search
+               (uses chat history)   (ticker/year)          │ merged by rank (RRF)
                                               top-k chunks ─┴─► Gemini ──► cited answer
                                        + last 3 exchanges ──┘                │
                                                                  saved to data/chats.db
@@ -26,10 +28,12 @@ sec-filings-analyst-rag/
 │   ├── indexing/
 │   │   ├── embedder.py        # sentence-transformers embeddings (local, free)
 │   │   ├── vector_store.py    # ChromaDB persistent store with metadata filters
-│   │   └── pipeline.py        # Offline job: raw -> processed -> chunks -> vectors
+│   │   ├── keyword_index.py   # SQLite FTS5 keyword index (BM25) with the same filters
+│   │   └── pipeline.py        # Offline job: raw -> processed -> chunks -> vectors + keywords
 │   ├── retrieval/
 │   │   ├── query_parser.py    # Pull tickers / fiscal years out of the question
-│   │   └── retriever.py       # Dense search + metadata filtering
+│   │   ├── fusion.py          # Reciprocal Rank Fusion of ranked result lists
+│   │   └── retriever.py       # Hybrid (default), dense or keyword search + filters
 │   ├── generation/
 │   │   ├── prompts.py         # System, rewrite and context/history prompts
 │   │   └── llm.py             # Gemini calls (streaming); failures raise GenerationError
@@ -48,6 +52,7 @@ sec-filings-analyst-rag/
     ├── raw/                   # Downloaded 10-K HTML + metadata JSON (per ticker)
     ├── processed/             # Parsed filings as JSON
     ├── vectorstore/           # ChromaDB files
+    ├── keyword_index.db       # Keyword search index (SQLite FTS5)
     └── chats.db               # Saved conversations (SQLite)
 ```
 
@@ -71,9 +76,21 @@ sec-rag ask "What supply chain risks does Apple describe in FY2024?"
 
 uvicorn sec_rag.api.main:app --reload   # API at http://localhost:8000/docs
 streamlit run app/streamlit_app.py      # Chat UI
-python evaluation/run_eval.py           # Retrieval quality
+python evaluation/run_eval.py           # Compare dense / keyword / hybrid retrieval
 pytest
 ```
+
+## Hybrid search
+
+Retrieval runs a meaning-based vector search and a keyword (BM25) search, takes the top 30
+from each, and merges them with Reciprocal Rank Fusion: chunks ranked well by both rise to
+the top. Keyword search catches exact terms that meaning-based search can miss, such as
+product names and codes ("CUDA", "H100", "Vision Pro").
+
+- `SEC_RAG_RETRIEVAL_MODE`: `hybrid` (default), `dense` or `keyword`
+- `sec-rag index` fills both indexes. For chunks indexed before hybrid search existed, run
+  `sec-rag index --keyword-only` to build the keyword index without re-embedding.
+- Source scores are merged rank scores (small numbers like 0.03), not percentages.
 
 ## Chats
 
@@ -94,7 +111,6 @@ Without `conversation_id`, queries are one-off and nothing is saved.
 
 ## Next steps
 
-- **Hybrid search**: add BM25 next to dense vectors; exact terms like "EBITDA" or segment names matter in filings.
 - **Reranking**: a cross-encoder (e.g. `BAAI/bge-reranker-base`) over the top 30 → top 8.
 - **Tables**: Item 8 financial statements lose structure as plain text; use XBRL company facts (`data.sec.gov/api/xbrl/companyfacts`) for numeric questions.
 - **Multi-company and multi-year questions**: break the question into one retrieval per company/year, then synthesize.

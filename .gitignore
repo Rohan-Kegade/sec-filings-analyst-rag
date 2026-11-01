@@ -15,4 +15,5 @@ data/raw/*
 data/processed/*
 data/vectorstore/*
 data/chats.db*
+data/keyword_index.db*
 !data/**/.gitkeep

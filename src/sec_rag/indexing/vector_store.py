@@ -1,5 +1,7 @@
 """Persistent vector store backed by ChromaDB."""
 
+from collections.abc import Iterator
+
 import chromadb
 
 from sec_rag.config import settings
@@ -39,6 +41,30 @@ class VectorStore:
             chunk = Chunk(chunk_id=chunk_id, text=text, **meta)
             retrieved.append(RetrievedChunk(chunk=chunk, score=1 - distance))
         return retrieved
+
+    def get_by_ids(self, ids: list[str]) -> dict[str, Chunk]:
+        if not ids:
+            return {}
+        result = self.collection.get(ids=ids, include=["documents", "metadatas"])
+        return {
+            chunk_id: Chunk(chunk_id=chunk_id, text=text, **meta)
+            for chunk_id, text, meta in zip(
+                result["ids"], result["documents"], result["metadatas"]
+            )
+        }
+
+    def iter_chunks(self, batch_size: int = UPSERT_BATCH_SIZE) -> Iterator[list[Chunk]]:
+        """Yield every stored chunk in batches (without embeddings)."""
+        for offset in range(0, self.count(), batch_size):
+            result = self.collection.get(
+                include=["documents", "metadatas"], limit=batch_size, offset=offset
+            )
+            yield [
+                Chunk(chunk_id=chunk_id, text=text, **meta)
+                for chunk_id, text, meta in zip(
+                    result["ids"], result["documents"], result["metadatas"]
+                )
+            ]
 
     def known_tickers(self) -> set[str]:
         metadatas = self.collection.get(include=["metadatas"])["metadatas"]

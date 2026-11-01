@@ -21,11 +21,18 @@ def download(tickers: list[str], years: int = typer.Option(3, help="Most recent 
 
 
 @app.command()
-def index():
+def index(
+    keyword_only: bool = typer.Option(
+        False, help="Only rebuild the keyword index from chunks already in the vector store"
+    ),
+):
     """Parse, chunk, embed and index all downloaded filings."""
-    from sec_rag.indexing.pipeline import index_filings
+    from sec_rag.indexing.pipeline import index_filings, rebuild_keyword_index
 
-    typer.echo(f"Indexed {index_filings()} chunks")
+    if keyword_only:
+        typer.echo(f"Keyword-indexed {rebuild_keyword_index()} chunks")
+    else:
+        typer.echo(f"Indexed {index_filings()} chunks")
 
 
 @app.command()
@@ -45,7 +52,7 @@ def ask(
     typer.echo("\n\nSources:")
     for i, rc in enumerate(result.sources, start=1):
         c = rc.chunk
-        typer.echo(f"  [{i}] {c.ticker} FY{c.fiscal_year} Item {c.item} ({rc.score:.2f})")
+        typer.echo(f"  [{i}] {c.ticker} FY{c.fiscal_year} Item {c.item} (relevance {rc.score:.3f})")
 
 
 if __name__ == "__main__":

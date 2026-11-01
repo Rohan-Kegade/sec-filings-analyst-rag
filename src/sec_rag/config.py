@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -26,6 +27,9 @@ class Settings(BaseSettings):
 
     # Retrieval
     top_k: int = 8
+    retrieval_mode: Literal["hybrid", "dense", "keyword"] = "hybrid"
+    hybrid_candidates: int = 30  # results taken from each search before merging
+    rrf_k: int = 60
 
     # Generation
     gemini_api_key: str | None = Field(default=None, validation_alias="GEMINI_API_KEY")
@@ -51,6 +55,10 @@ class Settings(BaseSettings):
     @property
     def vectorstore_dir(self) -> Path:
         return self.data_dir / "vectorstore"
+
+    @property
+    def keyword_index_path(self) -> Path:
+        return self.data_dir / "keyword_index.db"
 
 
 settings = Settings()

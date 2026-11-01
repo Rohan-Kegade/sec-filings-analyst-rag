@@ -30,7 +30,7 @@ def render_sources(sources: list[Source]) -> None:
         for i, s in enumerate(sources, start=1):
             st.markdown(
                 f"**[{i}] {s.ticker} FY{s.fiscal_year} - Item {s.item}: {s.item_title}** "
-                f"· score {s.score:.2f} · [filing]({s.source_url})"
+                f"· relevance {s.score:.3f} · [filing]({s.source_url})"
             )
             st.caption(s.excerpt)
 
