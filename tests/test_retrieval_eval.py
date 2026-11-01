@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from evaluation.retrieval_eval import runner
 from evaluation.retrieval_eval.goldens import Golden, load_goldens
-from evaluation.retrieval_eval.judge import ClaudeJudge
+from evaluation.judge import ClaudeJudge
 from sec_rag.config import Settings, settings
 from sec_rag.generation.llm import FALLBACK_BETA
 from sec_rag.models import RetrievedChunk

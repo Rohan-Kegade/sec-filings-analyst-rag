@@ -1,12 +1,9 @@
 """Retrieve for each golden, then score the retrieved chunks with DeepEval metrics."""
 
 import asyncio
-import json
-import subprocess
 import time
 from collections.abc import Callable
 from datetime import datetime
-from pathlib import Path
 from statistics import mean
 
 from deepeval.metrics import ContextualPrecisionMetric, ContextualRecallMetric
@@ -14,10 +11,11 @@ from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 
 from evaluation.retrieval_eval.goldens import Golden
+from evaluation.runs import git_commit
 from sec_rag.config import settings
 from sec_rag.retrieval.retriever import Retriever
 
-RUNS_DIR = Path(__file__).parents[1] / "runs" / "retrieval"
+RUN_KIND = "retrieval"  # saved under evaluation/runs/retrieval/
 METRICS = ("recall", "precision")
 
 
@@ -101,16 +99,6 @@ def summarize(rows: list[dict]) -> dict:
     return summary
 
 
-def _git_commit() -> str | None:
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
-        )
-        return result.stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return None
-
-
 def run(
     retrievers: dict[str, Retriever],
     goldens: list[Golden],
@@ -138,7 +126,7 @@ def run(
             "embedding_model": settings.embedding_model,
             "hybrid_candidates": settings.hybrid_candidates,
             "rrf_k": settings.rrf_k,
-            "git_commit": _git_commit(),
+            "git_commit": git_commit(),
         },
         "goldens": {
             "total": len(goldens),
@@ -151,18 +139,3 @@ def run(
         },
         "cases": results,
     }
-
-
-def save(result: dict) -> Path:
-    RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    path = RUNS_DIR / f"{result['timestamp'].replace(':', '-')}.json"
-    path.write_text(json.dumps(result, indent=2), encoding="utf-8")
-    return path
-
-
-def list_runs() -> list[Path]:
-    return sorted(RUNS_DIR.glob("*.json"))
-
-
-def load_run(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))

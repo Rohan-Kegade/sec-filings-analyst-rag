@@ -10,9 +10,10 @@ from pathlib import Path
 
 import typer
 
+from evaluation import runs
 from evaluation.retrieval_eval import runner
 from evaluation.retrieval_eval.goldens import load_goldens
-from evaluation.retrieval_eval.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL
+from evaluation.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL
 
 app = typer.Typer(help=__doc__, no_args_is_help=True)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
@@ -89,7 +90,7 @@ def run(
     save: bool = typer.Option(True, help="Save the run for `compare`"),
 ):
     """Score retrieval with DeepEval Contextual Recall and Contextual Precision."""
-    from evaluation.retrieval_eval.judge import ClaudeJudge
+    from evaluation.judge import ClaudeJudge
 
     goldens = load_goldens()
     goldens = [
@@ -115,18 +116,18 @@ def run(
     print_report(result)
     typer.echo(f"\n{judge.cost_summary()}")
     if save:
-        typer.echo(f"Saved {runner.save(result)}")
+        typer.echo(f"Saved {runs.save(result, runner.RUN_KIND)}")
 
 
 @app.command()
 def compare(before: Path = typer.Argument(None), after: Path = typer.Argument(None)):
     """Compare two saved runs (default: the last two)."""
     if before is None or after is None:
-        runs = runner.list_runs()
-        if len(runs) < 2:
+        saved = runs.list_runs(runner.RUN_KIND)
+        if len(saved) < 2:
             raise typer.Exit("Need at least two saved runs to compare.")
-        before, after = runs[-2], runs[-1]
-    a, b = runner.load_run(before), runner.load_run(after)
+        before, after = saved[-2], saved[-1]
+    a, b = runs.load_run(before), runs.load_run(after)
     typer.echo(f"before: {before.name}\nafter:  {after.name}")
     for key, value in b["settings"].items():
         if a["settings"].get(key) != value:

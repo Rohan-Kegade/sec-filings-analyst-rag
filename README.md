@@ -48,6 +48,8 @@ sec-filings-analyst-rag/
 ├── evaluation/
 │   ├── goldens/               # 40 retrieval goldens (DeepEval format, with source quotes)
 │   ├── retrieval_eval/        # DeepEval Contextual Recall / Precision with a Claude judge
+│   ├── generator_eval/        # DeepEval Faithfulness / Answer Relevancy on frozen contexts
+│   ├── judge.py               # ClaudeJudge: Claude as a DeepEval judge model
 │   └── run_eval.py            # Quick free check: section + exact-term hits per mode
 ├── tests/                     # Unit tests (parser, chunker, prompts, chat)
 ├── notebooks/                 # Exploration
@@ -102,6 +104,29 @@ python -m evaluation.retrieval_eval compare                      # last two runs
 Every run calls the judge, so it costs money (roughly $0.05 per golden per mode with
 Sonnet 5.5) and scores vary slightly between runs; differences under ~0.03 are likely
 noise. Runs are saved to `evaluation/runs/retrieval/` with their settings.
+
+## Generator evaluation (DeepEval)
+
+Tests the answer generator alone: each of the 54 goldens in
+`evaluation/goldens/generator_goldens.json` has a frozen set of excerpts (evidence plus
+same-year distractors), so retrieval can't affect the scores. The generator
+(`SEC_RAG_LLM_MODEL`) answers from those excerpts, then the judge scores:
+
+- **Faithfulness**: share of the answer's claims supported by the excerpts it was given.
+- **Answer Relevancy**: share of the answer's statements that address the question.
+
+Besides the 40 regular questions, the goldens include partial-context, wrong-year,
+model-already-knows and no-answer cases. For no-answer cases the report also shows whether
+the answer said the excerpts don't contain the information (a simple text check).
+
+```bash
+python -m evaluation.generator_eval run                     # all 54 goldens
+python -m evaluation.generator_eval run --category partial  # one category
+python -m evaluation.generator_eval compare                 # last two runs
+```
+
+Roughly $0.04 per golden for the Sonnet judge, plus generation. Runs are saved to
+`evaluation/runs/generator/`.
 
 ## Hybrid search
 
