@@ -50,7 +50,8 @@ sec-filings-analyst-rag/
 │   ├── retrieval_eval/        # DeepEval Contextual Recall / Precision with a Claude judge
 │   ├── generator_eval/        # DeepEval Faithfulness / Answer Relevancy on frozen contexts
 │   ├── rag_eval/              # RAG triad on the full pipeline (context/answer relevance, groundedness)
-│   ├── app_eval/              # Application evals on the full pipeline (correctness so far)
+│   ├── app_eval/              # Application evals on the full pipeline (correctness, completeness)
+│   ├── scope_eval/            # Safety: scope adherence, incl. injection, toxicity, leak probes
 │   ├── judge.py               # ClaudeJudge: Claude as a DeepEval judge model
 │   └── run_eval.py            # Quick free check: section + exact-term hits per mode
 ├── tests/                     # Unit tests (parser, chunker, prompts, chat)
@@ -141,14 +142,13 @@ scores the three links of the triad with the judge:
 | Groundedness (excerpts → answer) | `FaithfulnessMetric` | the generator making things up |
 | Answer relevance (question → answer) | `AnswerRelevancyMetric` | an off-target answer |
 
-All three are reference-free, so only questions are needed: the 40 golden questions plus
-5 out-of-scope ones in `evaluation/goldens/out_of_scope_goldens.json` (an unindexed company, a year
-not downloaded, a long-range forecast, investment advice). Each case gets a diagnosis of
-the first failing link, and out-of-scope questions are checked for not answering.
+All three are reference-free, so only questions are needed: the 40 golden questions. Each
+case gets a diagnosis of the first failing link. (Out-of-scope questions have their own
+eval, below.)
 
 ```bash
-python -m evaluation.rag_eval run                         # all 45 questions
-python -m evaluation.rag_eval run --category out_of_scope
+python -m evaluation.rag_eval run                         # all 40 questions
+python -m evaluation.rag_eval run --category comparison
 python -m evaluation.rag_eval compare
 ```
 
@@ -164,16 +164,15 @@ each selected metric (DeepEval G-Eval with fixed steps):
 
 | Metric | Golden field | Asks |
 |---|---|---|
-| **Correctness** | `key_facts`: what must be right | Are the key facts stated correctly, with no wrong numbers, years, companies or contradictions? Out-of-scope questions must decline instead of inventing an answer. |
-| **Completeness** | `required_points`: what must be covered | Does the answer cover everything the question asks for? Coverage only; accuracy is correctness's job. Not applied to out-of-scope questions. |
+| **Correctness** | `key_facts`: what must be right | Are the key facts stated correctly, with no wrong numbers, years, companies or contradictions? |
+| **Completeness** | `required_points`: what must be covered | Does the answer cover everything the question asks for? Coverage only; accuracy is correctness's job. |
 
 Neither penalizes extra details beyond the reference. A free code check also reports whether
 the key facts' numbers appear in the answer. The 40 goldens store `key_facts` and
-`required_points` next to their reference answers in `retrieval_goldens.json`; the 5
-out-of-scope questions are in `out_of_scope_goldens.json`.
+`required_points` next to their reference answers in `retrieval_goldens.json`.
 
 ```bash
-python -m evaluation.app_eval run                             # all metrics, 45 goldens
+python -m evaluation.app_eval run                             # all metrics, 40 goldens
 python -m evaluation.app_eval run --metric completeness --category qualitative
 python -m evaluation.app_eval compare                         # last two runs
 ```
@@ -181,6 +180,25 @@ python -m evaluation.app_eval compare                         # last two runs
 Correctness is defined by the filings: the reference is what the company's 10-K for that
 fiscal year states. About $0.01 per golden for both metrics with the Sonnet judge, plus
 generation. Runs are saved to `evaluation/runs/app/`.
+
+## Safety evaluation: scope adherence (DeepEval)
+
+Checks that the app stays within its job (answering questions about the indexed 10-Ks)
+with 20 cases in `evaluation/goldens/scope_goldens.json`: companies and years not indexed,
+predictions, investment advice, facts the model may "know" but the filings don't contain,
+off-topic requests, prompt injection, provocation (toxicity), and system-prompt and data
+leakage probes. Each case states its expected behavior; the real pipeline answers it, and a
+G-Eval judge checks the answer against that behavior. A free code check also flags answers
+that reproduce sentences of the app's own instructions.
+
+```bash
+python -m evaluation.scope_eval run                            # all 20 cases
+python -m evaluation.scope_eval run --category prompt_injection
+python -m evaluation.scope_eval compare                        # lists regressions
+```
+
+About $0.005 per case with the Sonnet judge, plus generation. Runs are saved to
+`evaluation/runs/scope/`.
 
 ## Hybrid search
 

@@ -43,7 +43,7 @@ METRICS = {
     "completeness": AppMetric(
         build=completeness.completeness_metric,
         expected=completeness.expected_with_points,
-        applies=lambda golden: bool(golden.required_points),  # not for out-of-scope cases
+        applies=lambda golden: bool(golden.required_points),
     ),
 }
 
@@ -107,7 +107,6 @@ def run(pipeline: RAGPipeline, goldens: list[AppGolden], k: int, metrics: dict[s
         rows.append({
             "id": golden.id,
             "category": golden.category,
-            "expected_behavior": golden.expected_behavior,
             "status": golden.status,
             "question": golden.input,
             "answer": output["answer"],

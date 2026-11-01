@@ -1,7 +1,6 @@
 """Run each question through the real pipeline, then score the RAG triad with DeepEval."""
 
 import asyncio
-import re
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -12,7 +11,6 @@ from deepeval.metrics import AnswerRelevancyMetric, ContextualRelevancyMetric, F
 from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 
-from evaluation.generator_eval.runner import ABSTAIN
 from evaluation.rag_eval.questions import Question
 from evaluation.retrieval_eval.runner import score_case
 from evaluation.runs import git_commit
@@ -25,15 +23,6 @@ METRICS = ("context_relevance", "groundedness", "answer_relevance")
 # Diagnosis thresholds. Context relevance counts every statement in the excerpts, and 10-K
 # chunks are long and only partly on-topic, so its scores run low; read them relatively.
 LOW_CONTEXT, LOW_GROUNDED, LOW_RELEVANT = 0.3, 0.8, 0.7
-
-# Rough check that an advice question got no buy/sell recommendation.
-ADVICE = re.compile(
-    r"\b(not|cannot|can't|won't|unable to|not able to)\b.{0,40}\b(investment|financial)\s+advice"
-    r"|\b(cannot|can't|won't|unable to|not able to|don't)\b.{0,20}\b(tell you|say|advise|"
-    r"recommend)\b.{0,20}\bwhether\b"
-    r"|\b(buy|sell|hold)\b.{0,30}\b(recommendation|decision)",
-    re.IGNORECASE,
-)
 
 
 def deepeval_metrics(judge: DeepEvalBaseLLM, include_reason: bool) -> dict:
@@ -112,16 +101,6 @@ def diagnose(row: dict) -> str:
     return "ok"
 
 
-def handled(row: dict) -> bool | None:
-    """Did an out-of-scope question get the expected kind of answer? None if not applicable."""
-    answer = row["answer"] or ""
-    if row["expected_behavior"] == "abstain":
-        return answer == NO_RESULTS or bool(ABSTAIN.search(answer))
-    if row["expected_behavior"] == "decline_advice":
-        return bool(ADVICE.search(answer))
-    return None
-
-
 def summarize(rows: list[dict]) -> dict:
     summary = {"cases": len(rows)}
     for metric in METRICS:
@@ -129,10 +108,6 @@ def summarize(rows: list[dict]) -> dict:
         summary[metric] = mean(values) if values else None
     summary["diagnosis"] = {d: sum(r["diagnosis"] == d for r in rows)
                             for d in sorted({r["diagnosis"] for r in rows})}  # fmt: skip
-    out_of_scope = [r for r in rows if r["handled"] is not None]
-    summary["handled"] = (
-        sum(r["handled"] for r in out_of_scope) / len(out_of_scope) if out_of_scope else None
-    )
     return summary
 
 
@@ -147,7 +122,6 @@ def run(pipeline: RAGPipeline, questions: list[Question], k: int,
         row = {
             "id": question.id,
             "category": question.category,
-            "expected_behavior": question.expected_behavior,
             "question": question.input,
             "answer": output["answer"],
             "generation_error": output["error"],
@@ -160,7 +134,6 @@ def run(pipeline: RAGPipeline, questions: list[Question], k: int,
             **(scored or {metric: not_scored for metric in METRICS}),
         }
         row["diagnosis"] = diagnose(row)
-        row["handled"] = handled(row)
         rows.append(row)
 
     categories = sorted({q.category for q in questions})

@@ -14,9 +14,8 @@ from tests.test_retrieval_eval import FakeMetric
 
 def test_goldens_load_with_key_facts():
     goldens = load_goldens()
-    assert len(goldens) == 45
-    assert all(g.key_facts and g.expected_output for g in goldens)
-    assert sum(g.expected_behavior != "answer" for g in goldens) == 5
+    assert len(goldens) == 40  # out-of-scope questions live in the scope eval
+    assert all(g.key_facts and g.required_points and g.expected_output for g in goldens)
 
 
 def test_key_fact_numbers_come_from_the_reference_answer():
@@ -27,11 +26,10 @@ def test_key_fact_numbers_come_from_the_reference_answer():
         assert not missing, f"{golden.id}: {sorted(missing)}"
 
 
-def golden(gid="g", facts=("approximately 228,000 employees",), behavior="answer"):
+def golden(gid="g", facts=("approximately 228,000 employees",)):
     return AppGolden(
-        id=gid, category="fact", expected_behavior=behavior, status="draft",
-        input=f"Question {gid}?", expected_output="Microsoft employed about 228,000 people.",
-        key_facts=tuple(facts),
+        id=gid, category="fact", status="draft", input=f"Question {gid}?",
+        expected_output="Microsoft employed about 228,000 people.", key_facts=tuple(facts),
     )  # fmt: skip
 
 
@@ -54,9 +52,6 @@ def test_number_check(facts, answer, expected):
 
 def test_required_points_exist_and_add_no_new_numbers():
     for g in load_goldens():
-        if g.expected_behavior != "answer":
-            assert g.required_points == ()  # completeness doesn't apply to out-of-scope cases
-            continue
         assert g.required_points, g.id
         as_facts = AppGolden(**{**g.__dict__, "key_facts": g.required_points})
         reference = AppGolden(**{**g.__dict__, "key_facts": (g.expected_output,)})
@@ -85,7 +80,7 @@ def test_run_scores_every_metric_on_the_same_answers():
     ok = AppGolden(**{**golden("ok").__dict__, "required_points": ("the total",)})
     broken = AppGolden(**{**golden("broken").__dict__, "input": "a broken one",
                           "required_points": ("the total",)})  # fmt: skip
-    oos = golden("oos", behavior="abstain")  # no required points
+    oos = golden("oos")  # no required points, so completeness doesn't apply
     pipeline = SimpleNamespace(retriever=FakeRetriever(), generator=FakeGenerator())
     seen_c, build_c = fake_metric(0.9)
     seen_p, build_p = fake_metric(0.5)

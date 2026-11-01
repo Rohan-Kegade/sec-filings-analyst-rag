@@ -1,7 +1,7 @@
 """Commands: run, compare.
 
-    python -m evaluation.rag_eval run                        # 40 questions + 5 out-of-scope
-    python -m evaluation.rag_eval run --category out_of_scope
+    python -m evaluation.rag_eval run                        # all 40 questions
+    python -m evaluation.rag_eval run --category comparison
     python -m evaluation.rag_eval compare                    # last two saved runs
 """
 
@@ -53,7 +53,7 @@ def print_report(result: dict) -> None:
 
     rows = result["cases"]
     for row in rows:
-        if row["diagnosis"] in ("ok", "no_context") or row["expected_behavior"] != "answer":
+        if row["diagnosis"] in ("ok", "no_context"):
             continue
         scores = ", ".join(f"{SHORT[m]} {_fmt(row[m]['score'], 2)}" for m in runner.METRICS)
         typer.echo(f"\n  [{row['id']}] {row['diagnosis']}: {scores}")
@@ -61,14 +61,6 @@ def print_report(result: dict) -> None:
                   "off_target": "answer_relevance"}.get(row["diagnosis"])  # fmt: skip
         if metric and row[metric]["reason"]:
             typer.echo(f"     {row[metric]['reason'][:240]}")
-
-    oos = [r for r in rows if r["handled"] is not None]
-    if oos:
-        typer.echo("\nOut-of-scope questions (should not answer / not give advice):")
-        for r in oos:
-            mark = "ok  " if r["handled"] else "MISS"
-            text = (r["answer"] or r["generation_error"] or "")[:150]
-            typer.echo(f"  {mark} [{r['id']}] {text!r}")
 
 
 @app.command()

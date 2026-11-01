@@ -22,9 +22,6 @@ EVALUATION_STEPS = [
     "wrong number, date, fiscal year or company for a key fact.",
     "Do not penalize additional details that the expected output does not mention, unless "
     "they contradict it.",
-    "If the expected output says the information is not available, or describes how to "
-    "respond instead of giving facts (for example, not giving investment advice), the actual "
-    "output is correct only if it responds that way and does not invent an answer.",
 ]
 
 _NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")

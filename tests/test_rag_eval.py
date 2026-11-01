@@ -12,12 +12,10 @@ from tests.test_keyword_index import make_chunk
 from tests.test_retrieval_eval import FakeMetric
 
 
-def test_questions_are_the_40_goldens_plus_out_of_scope():
+def test_questions_are_the_40_goldens():
     questions = load_questions()
-    assert len(questions) == 45
-    oos = [q for q in questions if q.category == "out_of_scope"]
-    assert {q.expected_behavior for q in oos} == {"abstain", "decline_advice"}
-    assert all(q.expected_behavior == "answer" for q in questions if q.category != "out_of_scope")
+    assert len(questions) == 40  # out-of-scope questions live in the scope eval
+    assert "out_of_scope" not in {q.category for q in questions}
 
 
 class FakeRetriever:
@@ -44,12 +42,10 @@ class FakeGenerator:
 
 
 QUESTIONS = [
-    Question("good", "fact", "answer", "MSFT employees?"),
-    Question("weak-retrieval", "fact", "answer", "AAPL margins?"),
-    Question("googl", "out_of_scope", "abstain", "GOOGL revenue?"),
-    Question("y2019", "out_of_scope", "abstain", "AAPL risks in 2019?"),
-    Question("advice", "out_of_scope", "decline_advice", "Should I buy NVDA?"),
-    Question("broken", "fact", "answer", "a broken one"),
+    Question("good", "fact", "MSFT employees?"),
+    Question("weak-retrieval", "fact", "AAPL margins?"),
+    Question("y2019", "fact", "AAPL risks in 2019?"),  # retrieval finds nothing
+    Question("broken", "fact", "a broken one"),
 ]
 
 
@@ -79,23 +75,11 @@ def test_run_scores_the_triad_and_diagnoses_failures():
     assert rows["weak-retrieval"]["diagnosis"] == "retrieval"
     assert rows["y2019"]["answer"] == NO_RESULTS and rows["y2019"]["diagnosis"] == "no_context"
     assert rows["broken"]["diagnosis"] == "generation_error"
-    assert len(seen) == 4  # no judge calls for the empty-context or failed cases
+    assert len(seen) == 2  # no judge calls for the empty-context or failed cases
 
-    assert rows["googl"]["handled"] and rows["y2019"]["handled"] and rows["advice"]["handled"]
-    assert rows["good"]["handled"] is None
-    assert result["summary"]["handled"] == 1.0
     assert result["summary"]["groundedness"] == pytest.approx(1.0)
     assert result["settings"]["retrieval_mode"] == "hybrid"
     assert result["settings"]["generator"] == "claude-haiku-5-5"
-
-
-@pytest.mark.parametrize("answer, expected", [
-    ("I can't tell you whether to buy NVDA. That depends on your goals.", True),
-    ("I can't give investment advice, but the filing lists these risks [1].", True),
-    ("NVDA is a strong buy given its Data Center growth [2].", False),
-])  # fmt: skip
-def test_advice_check(answer, expected):
-    assert bool(runner.ADVICE.search(answer)) is expected
 
 
 @pytest.mark.parametrize("scores, expected", [
