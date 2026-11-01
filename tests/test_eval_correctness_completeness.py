@@ -4,12 +4,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from evaluation.app_eval import runner
-from evaluation.app_eval.completeness import expected_with_points
-from evaluation.app_eval.correctness import expected_with_key_facts, key_numbers, number_check
-from evaluation.app_eval.goldens import AppGolden, load_goldens
-from tests.test_rag_eval import FakeGenerator, FakeRetriever
-from tests.test_retrieval_eval import FakeMetric
+from evals import eval_correctness_completeness
+from evals.eval_correctness_completeness import (
+    AppGolden,
+    AppMetric,
+    expected_with_key_facts,
+    expected_with_points,
+    key_numbers,
+    load_goldens,
+    number_check,
+)
+from tests.test_eval_rag_triad import FakeGenerator, FakeRetriever
+from tests.test_eval_retriever import FakeMetric
 
 
 def test_goldens_load_with_key_facts():
@@ -85,13 +91,15 @@ def test_run_scores_every_metric_on_the_same_answers():
     seen_c, build_c = fake_metric(0.9)
     seen_p, build_p = fake_metric(0.5)
     metrics = {
-        "correctness": runner.AppMetric(build_c, expected_with_key_facts, lambda g: True),
-        "completeness": runner.AppMetric(build_p, expected_with_points,
-                                         lambda g: bool(g.required_points)),
+        "correctness": AppMetric(build_c, expected_with_key_facts, lambda g: True),
+        "completeness": AppMetric(build_p, expected_with_points,
+                                  lambda g: bool(g.required_points)),
     }  # fmt: skip
 
-    result = runner.run(pipeline, [ok, broken, oos], k=3, metrics=metrics, judge=None,
-                        concurrency=2, judge_name="claude-sonnet-5-5")  # fmt: skip
+    result = eval_correctness_completeness.run(
+        pipeline, [ok, broken, oos], k=3, metrics=metrics, judge=None,
+        concurrency=2, judge_name="claude-sonnet-5-5",
+    )  # fmt: skip
 
     # Each metric sees its own expected output for the same generated answer.
     assert {m.seen.expected_output for m in seen_c} == {

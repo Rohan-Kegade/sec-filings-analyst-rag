@@ -2,9 +2,9 @@
 
 import pytest
 
-from evaluation.generator_eval import runner
-from evaluation.generator_eval.goldens import GeneratorGolden, load_goldens, to_chunks
-from tests.test_retrieval_eval import FakeMetric
+from evals import eval_generator
+from evals.eval_generator import GeneratorGolden, load_goldens, to_chunks
+from tests.test_eval_retriever import FakeMetric
 
 
 def test_goldens_file_loads_and_every_excerpt_parses():
@@ -48,7 +48,7 @@ def test_to_chunks_rejects_excerpts_without_header():
     ("Microsoft employed approximately 228,000 people [1].", False),
 ])  # fmt: skip
 def test_abstain_heuristic(answer, expected):
-    assert bool(runner.ABSTAIN.search(answer)) is expected
+    assert bool(eval_generator.ABSTAIN.search(answer)) is expected
 
 
 class FakeGenerator:
@@ -75,7 +75,7 @@ def test_run_generates_from_frozen_context_and_scores():
         seen.append(metrics)
         return metrics
 
-    result = runner.run(generator, goldens, metric_factory=factory, concurrency=2,
+    result = eval_generator.run(generator, goldens, metric_factory=factory, concurrency=2,
                         judge_name="claude-sonnet-5-5")  # fmt: skip
 
     # The generator got the golden's own excerpts, and the judge got those same excerpts.

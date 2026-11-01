@@ -4,12 +4,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from evaluation.rag_eval import runner
-from evaluation.rag_eval.questions import Question, load_questions
+from evals import eval_rag_triad
+from evals.eval_rag_triad import Question, load_questions
 from sec_rag.models import RetrievedChunk
 from sec_rag.pipeline import NO_RESULTS
+from tests.test_eval_retriever import FakeMetric
 from tests.test_keyword_index import make_chunk
-from tests.test_retrieval_eval import FakeMetric
 
 
 def test_questions_are_the_40_goldens():
@@ -57,17 +57,17 @@ def test_run_scores_the_triad_and_diagnoses_failures():
         n = len(seen)
         context = 0.1 if n == 1 else 0.6  # the 2nd scored question has poor retrieval
         metrics = {"context_relevance": FakeMetric(score=context),
-                   "groundedness": FakeMetric(score=1.0),
+                   "faithfulness": FakeMetric(score=1.0),
                    "answer_relevance": FakeMetric(score=0.9)}  # fmt: skip
         seen.append(metrics)
         return metrics
 
-    result = runner.run(pipeline, QUESTIONS, k=3, metric_factory=factory, concurrency=2,
+    result = eval_rag_triad.run(pipeline, QUESTIONS, k=3, metric_factory=factory, concurrency=2,
                         judge_name="claude-sonnet-5-5")  # fmt: skip
     rows = {r["id"]: r for r in result["cases"]}
 
     # The judge sees exactly what the pipeline retrieved and generated.
-    case = seen[0]["groundedness"].seen
+    case = seen[0]["faithfulness"].seen
     assert case.retrieval_context == ["excerpt 0", "excerpt 1", "excerpt 2"]
     assert case.actual_output == "An answer [1]."
 
@@ -77,7 +77,7 @@ def test_run_scores_the_triad_and_diagnoses_failures():
     assert rows["broken"]["diagnosis"] == "generation_error"
     assert len(seen) == 2  # no judge calls for the empty-context or failed cases
 
-    assert result["summary"]["groundedness"] == pytest.approx(1.0)
+    assert result["summary"]["faithfulness"] == pytest.approx(1.0)
     assert result["settings"]["retrieval_mode"] == "hybrid"
     assert result["settings"]["generator"] == "claude-haiku-5-5"
 
@@ -85,11 +85,11 @@ def test_run_scores_the_triad_and_diagnoses_failures():
 @pytest.mark.parametrize("scores, expected", [
     ((0.6, 1.0, 0.9), "ok"),
     ((0.2, 1.0, 0.9), "retrieval"),
-    ((0.6, 0.5, 0.9), "not_grounded"),
+    ((0.6, 0.5, 0.9), "not_faithful"),
     ((0.6, 1.0, 0.4), "off_target"),
 ])  # fmt: skip
 def test_diagnose_checks_links_in_pipeline_order(scores, expected):
     row = {"generation_error": None, "sources": ["s"]}
-    for metric, score in zip(runner.METRICS, scores):
+    for metric, score in zip(eval_rag_triad.METRICS, scores):
         row[metric] = {"score": score}
-    assert runner.diagnose(row) == expected
+    assert eval_rag_triad.diagnose(row) == expected

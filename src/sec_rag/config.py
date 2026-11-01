@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # Chat
     chat_history_turns: int = 3  # earlier question/answer pairs sent with a follow-up
 
-    # Evaluation (LLM judge for evaluation/retrieval_eval)
+    # Evaluation (LLM judge for the evals in evals/)
     judge_model: str = "claude-sonnet-5-5"
     judge_effort: str = "medium"  # low | medium | high
 

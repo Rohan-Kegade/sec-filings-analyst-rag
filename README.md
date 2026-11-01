@@ -45,15 +45,15 @@ sec-filings-analyst-rag/
 │   ├── api/                   # FastAPI service (queries, conversations, health)
 │   └── cli.py                 # `sec-rag download | index | ask`
 ├── app/streamlit_app.py       # Chat UI with saved conversations
-├── evaluation/
-│   ├── goldens/               # 40 retrieval goldens (DeepEval format, with source quotes)
-│   ├── retrieval_eval/        # DeepEval Contextual Recall / Precision with a Claude judge
-│   ├── generator_eval/        # DeepEval Faithfulness / Answer Relevancy on frozen contexts
-│   ├── rag_eval/              # RAG triad on the full pipeline (context/answer relevance, groundedness)
-│   ├── app_eval/              # Application evals on the full pipeline (correctness, completeness)
-│   ├── scope_eval/            # Safety: scope adherence, incl. injection, toxicity, leak probes
+├── goldens/                   # Eval goldens: retrieval, generator, scope (hand-checked)
+├── evals/                     # One file per eval (levels: see Evaluation below)
+│   ├── eval_retriever.py      # 1. Contextual Recall / Precision
+│   ├── eval_generator.py      # 1. Faithfulness / Answer Relevancy on frozen contexts
+│   ├── eval_rag_triad.py      # 2. Context relevance, faithfulness, answer relevance
+│   ├── eval_correctness_completeness.py  # 3. Quality: correctness, completeness
+│   ├── eval_scope_adherence.py           # 3. Safety: scope adherence
 │   ├── judge.py               # ClaudeJudge: Claude as a DeepEval judge model
-│   └── run_eval.py            # Quick free check: section + exact-term hits per mode
+│   └── runs.py                # Saving and loading eval runs (evals/runs/, not in git)
 ├── tests/                     # Unit tests (parser, chunker, prompts, chat)
 ├── notebooks/                 # Exploration
 └── data/
@@ -84,34 +84,53 @@ sec-rag ask "What supply chain risks does Apple describe in FY2024?"
 
 uvicorn sec_rag.api.main:app --reload   # API at http://localhost:8000/docs
 streamlit run app/streamlit_app.py      # Chat UI
-python evaluation/run_eval.py           # Compare dense / keyword / hybrid retrieval
 pytest
 ```
 
-## Retrieval evaluation (DeepEval)
+## Evaluation (DeepEval)
 
-`pip install -e ".[eval]"` adds DeepEval. Each golden's question goes through the
-retriever only, then a Claude judge (`claude-sonnet-5-5` by default) scores the top-k
-chunks against the golden's reference answer:
+`pip install -e ".[eval]"` adds DeepEval. The evals are grouped in four levels, from single
+components up to the whole suite:
+
+| Level | Eval | File |
+|---|---|---|
+| 1. Component | retriever | `evals/eval_retriever.py` |
+| | generator | `evals/eval_generator.py` |
+| 2. Pipeline | RAG triad: context relevance, faithfulness, answer relevance | `evals/eval_rag_triad.py` |
+| 3. Application | quality: correctness, completeness (style skipped) | `evals/eval_correctness_completeness.py` |
+| | safety: scope adherence (toxicity, leakage TODO) | `evals/eval_scope_adherence.py` |
+| | operations: latency, cost, tokens | TODO |
+| 4. Regression | the whole suite against a baseline | TODO |
+
+Each eval runs on its own: `python -m evals.<file> run`, then `compare` for its last two
+runs. Every command has `--help`.
+
+### 1. Component evals
+
+#### Retriever
+
+Each golden's question goes through the retriever only, then a Claude judge
+(`claude-sonnet-5-5` by default) scores the top-k chunks against the golden's reference
+answer:
 
 - **Contextual Recall**: share of the reference answer's statements supported by the
   retrieved chunks.
 - **Contextual Precision**: whether relevant chunks are ranked above irrelevant ones.
 
 ```bash
-python -m evaluation.retrieval_eval run                          # hybrid, all goldens
-python -m evaluation.retrieval_eval run --mode dense --mode hybrid --category fact
-python -m evaluation.retrieval_eval compare                      # last two runs
+python -m evals.eval_retriever run                          # hybrid, all goldens
+python -m evals.eval_retriever run --mode dense --mode hybrid --category fact
+python -m evals.eval_retriever compare                      # last two runs
 ```
 
 Every run calls the judge, so it costs money (roughly $0.05 per golden per mode with
 Sonnet 5.5) and scores vary slightly between runs; differences under ~0.03 are likely
-noise. Runs are saved to `evaluation/runs/retrieval/` with their settings.
+noise. Runs are saved to `evals/runs/retrieval/` with their settings.
 
-## Generator evaluation (DeepEval)
+#### Generator
 
 Tests the answer generator alone: each of the 54 goldens in
-`evaluation/goldens/generator_goldens.json` has a frozen set of excerpts (evidence plus
+`goldens/generator_goldens.json` has a frozen set of excerpts (evidence plus
 same-year distractors), so retrieval can't affect the scores. The generator
 (`SEC_RAG_LLM_MODEL`) answers from those excerpts, then the judge scores:
 
@@ -123,15 +142,15 @@ model-already-knows and no-answer cases. For no-answer cases the report also sho
 the answer said the excerpts don't contain the information (a simple text check).
 
 ```bash
-python -m evaluation.generator_eval run                     # all 54 goldens
-python -m evaluation.generator_eval run --category partial  # one category
-python -m evaluation.generator_eval compare                 # last two runs
+python -m evals.eval_generator run                     # all 54 goldens
+python -m evals.eval_generator run --category partial  # one category
+python -m evals.eval_generator compare                 # last two runs
 ```
 
 Roughly $0.04 per golden for the Sonnet judge, plus generation. Runs are saved to
-`evaluation/runs/generator/`.
+`evals/runs/generator/`.
 
-## End-to-end evaluation: the RAG triad (DeepEval)
+### 2. Pipeline evals: the RAG triad
 
 Runs each question through the real pipeline (filters, hybrid retrieval, generation) and
 scores the three links of the triad with the judge:
@@ -139,7 +158,7 @@ scores the three links of the triad with the judge:
 | Triad metric | DeepEval metric | Low score points to |
 |---|---|---|
 | Context relevance (question → excerpts) | `ContextualRelevancyMetric` | retrieval |
-| Groundedness (excerpts → answer) | `FaithfulnessMetric` | the generator making things up |
+| Faithfulness (excerpts → answer) | `FaithfulnessMetric` | the generator making things up |
 | Answer relevance (question → answer) | `AnswerRelevancyMetric` | an off-target answer |
 
 All three are reference-free, so only questions are needed: the 40 golden questions. Each
@@ -147,9 +166,9 @@ case gets a diagnosis of the first failing link. (Out-of-scope questions have th
 eval, below.)
 
 ```bash
-python -m evaluation.rag_eval run                         # all 40 questions
-python -m evaluation.rag_eval run --category comparison
-python -m evaluation.rag_eval compare
+python -m evals.eval_rag_triad run                         # all 40 questions
+python -m evals.eval_rag_triad run --category comparison
+python -m evals.eval_rag_triad compare
 ```
 
 Context relevance counts every statement in the excerpts, and 10-K chunks are long and only
@@ -157,7 +176,9 @@ partly on-topic, so its scores run low; compare it between runs rather than read
 absolute grade. About $0.11 per question with the Sonnet judge (context relevance reads every
 excerpt). The judge caps itself at 4 concurrent requests and retries rate limits.
 
-## Application evaluation: correctness and completeness (DeepEval)
+### 3. Application evals
+
+#### Quality: correctness and completeness
 
 Runs each golden's question through the full pipeline **once**, then scores the answers with
 each selected metric (DeepEval G-Eval with fixed steps):
@@ -172,33 +193,43 @@ the key facts' numbers appear in the answer. The 40 goldens store `key_facts` an
 `required_points` next to their reference answers in `retrieval_goldens.json`.
 
 ```bash
-python -m evaluation.app_eval run                             # all metrics, 40 goldens
-python -m evaluation.app_eval run --metric completeness --category qualitative
-python -m evaluation.app_eval compare                         # last two runs
+python -m evals.eval_correctness_completeness run      # both metrics, 40 goldens
+python -m evals.eval_correctness_completeness run --metric completeness --category qualitative
+python -m evals.eval_correctness_completeness compare   # last two runs
 ```
 
 Correctness is defined by the filings: the reference is what the company's 10-K for that
 fiscal year states. About $0.01 per golden for both metrics with the Sonnet judge, plus
-generation. Runs are saved to `evaluation/runs/app/`.
+generation. Runs are saved to `evals/runs/app/`.
 
-## Safety evaluation: scope adherence (DeepEval)
+Style (tone, format, citations) is skipped for now.
 
-Checks that the app stays within its job (answering questions about the indexed 10-Ks)
-with 20 cases in `evaluation/goldens/scope_goldens.json`: companies and years not indexed,
-predictions, investment advice, facts the model may "know" but the filings don't contain,
-off-topic requests, prompt injection, provocation (toxicity), and system-prompt and data
-leakage probes. Each case states its expected behavior; the real pipeline answers it, and a
-G-Eval judge checks the answer against that behavior. A free code check also flags answers
+#### Safety: scope adherence
+
+Does the app stay within its job, answering questions about the indexed 10-Ks? Each case is
+a request plus the behavior a safe answer shows; the real pipeline answers it and a G-Eval
+judge checks the answer against that behavior. The 20 cases in `goldens/scope_goldens.json`
+cover companies and years not indexed, predictions, investment advice, facts the model may
+"know" but the filings don't contain, off-topic requests, prompt injection, provocation
+(toxicity), and system-prompt and data leakage probes. A free code check also flags answers
 that reproduce sentences of the app's own instructions.
 
 ```bash
-python -m evaluation.scope_eval run                            # all 20 cases
-python -m evaluation.scope_eval run --category prompt_injection
-python -m evaluation.scope_eval compare                        # lists regressions
+python -m evals.eval_scope_adherence run                            # all 20 cases
+python -m evals.eval_scope_adherence run --category prompt_injection
+python -m evals.eval_scope_adherence compare                        # lists regressions
 ```
 
 About $0.005 per case with the Sonnet judge, plus generation. Runs are saved to
-`evaluation/runs/scope/`.
+`evals/runs/safety/`. Toxicity and leakage as their own metrics are TODO.
+
+#### Operations (TODO)
+
+Latency, cost and tokens per answer.
+
+### 4. Regression (TODO)
+
+Run the whole suite and compare each level against a saved baseline.
 
 ## Hybrid search
 

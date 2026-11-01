@@ -1,4 +1,4 @@
-"""Saved eval runs, shared by the retrieval and generator evals."""
+"""Saved eval runs, shared by every eval (one folder per eval under evals/runs/)."""
 
 import json
 import subprocess
@@ -18,7 +18,7 @@ def git_commit() -> str | None:
 
 
 def save(result: dict, kind: str) -> Path:
-    """Write a run to evaluation/runs/<kind>/<timestamp>.json."""
+    """Write a run to evals/runs/<kind>/<timestamp>.json."""
     folder = RUNS_DIR / kind
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"{result['timestamp'].replace(':', '-')}.json"

@@ -6,9 +6,9 @@ from types import SimpleNamespace
 import pytest
 from pydantic import BaseModel
 
-from evaluation.retrieval_eval import runner
-from evaluation.retrieval_eval.goldens import Golden, load_goldens
-from evaluation.judge import ClaudeJudge
+from evals import eval_retriever
+from evals.eval_retriever import Golden, load_goldens
+from evals.judge import ClaudeJudge
 from sec_rag.config import Settings, settings
 from sec_rag.generation.llm import FALLBACK_BETA
 from sec_rag.models import RetrievedChunk
@@ -169,7 +169,7 @@ def test_run_scores_each_golden_and_records_errors():
         created.append(metrics)
         return metrics
 
-    result = runner.run({"hybrid": FakeRetriever()}, GOLDENS, k=3, metric_factory=factory,
+    result = eval_retriever.run({"hybrid": FakeRetriever()}, GOLDENS, k=3, metric_factory=factory,
                         concurrency=2, judge_name="claude-sonnet-5-5")  # fmt: skip
 
     # The test case holds the question, the golden's reference and only retrieved text.
