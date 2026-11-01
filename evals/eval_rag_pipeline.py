@@ -28,8 +28,8 @@ from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 
 from evals import runs
-from evals.eval_retriever import load_goldens, score_case
-from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL
+from evals.eval_retriever import load_goldens
+from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL, score_case
 from evals.runs import git_commit
 from sec_rag.config import settings
 from sec_rag.pipeline import NO_RESULTS, RAGPipeline
@@ -49,7 +49,7 @@ def load_questions() -> list[Question]:
 
 # --- runner ----------------------------------------------------------------------------------
 
-RUN_KIND = "rag"  # saved under evals/runs/rag/
+RUN_KIND = "rag_pipeline"  # saved under evals/runs/rag_pipeline/
 METRICS = ("context_relevance", "faithfulness", "answer_relevance")
 
 # Diagnosis thresholds. Context relevance counts every statement in the excerpts, and 10-K

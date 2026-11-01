@@ -1,9 +1,10 @@
-"""Claude as a DeepEval judge model."""
+"""Claude as a DeepEval judge model, and scoring one test case with judge metrics."""
 
 import asyncio
 
 import anthropic
 from deepeval.models import DeepEvalBaseLLM
+from deepeval.test_case import LLMTestCase
 from pydantic import BaseModel
 
 from sec_rag.config import settings
@@ -112,3 +113,21 @@ class ClaudeJudge(DeepEvalBaseLLM):
             cost = self.input_tokens / 1e6 * price_in + self.output_tokens / 1e6 * price_out
             summary += f" (~${cost:.2f})"
         return summary
+
+
+async def score_case(
+    test_case: LLMTestCase, metrics: dict, semaphore: asyncio.Semaphore
+) -> dict:
+    """Run each metric on one test case. A failed metric is recorded, not raised.
+
+    Shared by every eval: returns {metric name: {"score", "reason", "error"}}.
+    """
+    async with semaphore:
+        scores = {}
+        for name, metric in metrics.items():
+            try:
+                await metric.a_measure(test_case, _show_indicator=False)
+                scores[name] = {"score": metric.score, "reason": metric.reason, "error": None}
+            except Exception as exc:  # judge or API failure: keep the rest of the run going
+                scores[name] = {"score": None, "reason": None, "error": str(exc)}
+        return scores

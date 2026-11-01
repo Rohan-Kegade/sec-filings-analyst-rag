@@ -24,7 +24,7 @@ from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 
 from evals import GOLDENS_DIR, runs
-from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL
+from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL, score_case
 from evals.runs import git_commit
 from sec_rag.config import settings
 from sec_rag.retrieval.retriever import Retriever
@@ -57,7 +57,7 @@ def load_goldens(path: Path = GOLDENS_FILE) -> list[Golden]:
 
 # --- runner ----------------------------------------------------------------------------------
 
-RUN_KIND = "retrieval"  # saved under evals/runs/retrieval/
+RUN_KIND = "retriever"  # saved under evals/runs/retriever/
 METRICS = ("recall", "precision")
 
 
@@ -68,21 +68,6 @@ def deepeval_metrics(judge: DeepEvalBaseLLM, include_reason: bool) -> dict:
         "recall": ContextualRecallMetric(**common),
         "precision": ContextualPrecisionMetric(**common),
     }
-
-
-async def score_case(
-    test_case: LLMTestCase, metrics: dict, semaphore: asyncio.Semaphore
-) -> dict:
-    """Run both metrics on one test case. A failed metric is recorded, not raised."""
-    async with semaphore:
-        scores = {}
-        for name, metric in metrics.items():
-            try:
-                await metric.a_measure(test_case, _show_indicator=False)
-                scores[name] = {"score": metric.score, "reason": metric.reason, "error": None}
-            except Exception as exc:  # judge or API failure: keep the rest of the run going
-                scores[name] = {"score": None, "reason": None, "error": str(exc)}
-        return scores
 
 
 async def evaluate_mode(

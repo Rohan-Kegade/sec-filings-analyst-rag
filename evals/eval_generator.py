@@ -26,8 +26,7 @@ from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 
 from evals import GOLDENS_DIR, runs
-from evals.eval_retriever import score_case
-from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL
+from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL, score_case
 from evals.runs import git_commit
 from sec_rag.config import settings
 from sec_rag.generation.llm import AnswerGenerator

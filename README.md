@@ -52,7 +52,7 @@ sec-filings-analyst-rag/
 │   ├── eval_rag_pipeline.py   # 2. Context relevance, faithfulness, answer relevance
 │   ├── eval_application.py    # 3. Quality: correctness, completeness
 │   ├── eval_safety.py         # 3. Safety: scope adherence (more metrics later)
-│   ├── judge.py               # ClaudeJudge: Claude as a DeepEval judge model
+│   ├── judge.py               # ClaudeJudge (Claude as DeepEval judge) + shared score_case
 │   └── runs.py                # Saving and loading eval runs (evals/runs/, not in git)
 ├── tests/                     # Unit tests (parser, chunker, prompts, chat)
 ├── notebooks/                 # Exploration
@@ -125,7 +125,7 @@ python -m evals.eval_retriever compare                      # last two runs
 
 Every run calls the judge, so it costs money (roughly $0.05 per golden per mode with
 Sonnet 5.5) and scores vary slightly between runs; differences under ~0.03 are likely
-noise. Runs are saved to `evals/runs/retrieval/` with their settings.
+noise. Runs are saved to `evals/runs/retriever/` with their settings.
 
 #### Generator
 
@@ -207,7 +207,7 @@ python -m evals.eval_application compare   # last two runs
 
 Correctness is defined by the filings: the reference is what the company's 10-K for that
 fiscal year states. About $0.01 per golden for both metrics with the Sonnet judge, plus
-generation. Runs are saved to `evals/runs/app/`.
+generation. Runs are saved to `evals/runs/application/`.
 
 Style (tone, format, citations) is skipped for now.
 
