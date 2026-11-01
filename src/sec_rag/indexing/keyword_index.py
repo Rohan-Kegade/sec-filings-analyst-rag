@@ -79,6 +79,14 @@ class KeywordIndex:
                     [(c.chunk_id, c.text, c.ticker, str(c.fiscal_year), c.item) for c in batch],
                 )
 
+    def delete_filing(self, accession_number: str) -> None:
+        """Remove a filing's chunks. Chunk IDs start with "<accession>-"."""
+        prefix = f"{accession_number}-"
+        with self._connect() as conn:
+            conn.execute(
+                "DELETE FROM chunks WHERE substr(chunk_id, 1, ?) = ?", (len(prefix), prefix)
+            )
+
     def search(
         self, question: str, k: int, filters: dict | None = None
     ) -> list[tuple[str, float]]:

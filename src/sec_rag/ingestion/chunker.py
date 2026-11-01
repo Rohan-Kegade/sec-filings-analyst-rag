@@ -5,17 +5,28 @@ from sec_rag.models import Chunk, Filing
 
 
 def _split_text(text: str, chunk_size: int, overlap: int) -> list[str]:
-    """Pack paragraphs into chunks of at most chunk_size characters, with overlap."""
+    """Pack paragraphs into chunks of about chunk_size characters, with overlap.
+
+    Every new chunk starts with the last `overlap` characters of the previous one, so any
+    passage of at most `overlap` characters is always fully inside at least one chunk.
+    """
+    if not 0 <= overlap < chunk_size:
+        raise ValueError("overlap must be at least 0 and smaller than chunk_size")
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
     chunks: list[str] = []
     current = ""
 
     for para in paragraphs:
+        if len(para) > chunk_size and current:
+            # Close the current chunk, and carry its tail into the long paragraph's first
+            # piece so text across this boundary keeps its overlap like everywhere else.
+            chunks.append(current)
+            tail = current[-overlap:] if overlap else ""
+            para = f"{tail}\n\n{para}" if tail else para
+            current = ""
+
         # Hard-split paragraphs that are larger than a chunk on their own.
         while len(para) > chunk_size:
-            if current:
-                chunks.append(current)
-                current = ""
             chunks.append(para[:chunk_size])
             para = para[chunk_size - overlap :]
 

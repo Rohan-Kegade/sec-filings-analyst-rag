@@ -61,6 +61,20 @@ def test_filters_apply(tmp_path):
     assert {cid for cid, _ in both_years} == {"azure", "azure-2025"}
 
 
+def test_delete_filing_removes_only_that_filing(tmp_path):
+    index = KeywordIndex(tmp_path / "keyword.db")
+    index.upsert(
+        [
+            make_chunk("0000950170-24-000001-7-0", "Azure grew."),
+            make_chunk("0000950170-24-000001-7-1", "Xbox grew."),
+            make_chunk("0000950170-24-0000011-7-0", "Other filing with a longer accession."),
+        ]
+    )
+    index.delete_filing("0000950170-24-000001")
+    assert index.count() == 1
+    assert index.search("filing", k=5)[0][0] == "0000950170-24-0000011-7-0"
+
+
 def test_upsert_replaces_instead_of_duplicating(tmp_path):
     index = make_index(tmp_path)
     index.upsert([make_chunk("xbox", "Gaming revenue declined.")])

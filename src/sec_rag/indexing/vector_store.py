@@ -42,6 +42,10 @@ class VectorStore:
             retrieved.append(RetrievedChunk(chunk=chunk, score=1 - distance))
         return retrieved
 
+    def delete_filing(self, accession_number: str) -> None:
+        """Remove a filing's chunks, so re-chunking can't leave stale ones behind."""
+        self.collection.delete(where={"accession_number": accession_number})
+
     def get_by_ids(self, ids: list[str]) -> dict[str, Chunk]:
         if not ids:
             return {}

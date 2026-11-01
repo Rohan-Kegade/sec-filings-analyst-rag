@@ -31,7 +31,12 @@ def index_filings(
         processed_path.write_text(filing.model_dump_json(indent=2), encoding="utf-8")
 
         chunks = chunk_filing(filing)
-        store.upsert(chunks, embedder.embed_documents([c.text for c in chunks]))
+        embeddings = embedder.embed_documents([c.text for c in chunks])
+        # Replace the filing's chunks wholesale: a new chunking can produce fewer chunks,
+        # and upserting by ID alone would leave the old extra ones in place.
+        store.delete_filing(metadata.accession_number)
+        keyword_index.delete_filing(metadata.accession_number)
+        store.upsert(chunks, embeddings)
         keyword_index.upsert(chunks)
         total += len(chunks)
         logger.info(
