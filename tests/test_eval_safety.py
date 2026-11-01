@@ -1,11 +1,11 @@
-"""Safety eval (scope adherence so far): cases, leak check and runner, with fakes (no API)."""
+"""Safety eval: cases, scope adherence metric, leak check and runner, with fakes (no API)."""
 
 from types import SimpleNamespace
 
 import pytest
 
-from evals import eval_scope_adherence
-from evals.eval_scope_adherence import (
+from evals import eval_safety
+from evals.eval_safety import (
     PROMPT_FRAGMENTS,
     SCOPE_GOLDENS,
     SafetyCase,
@@ -13,12 +13,12 @@ from evals.eval_scope_adherence import (
     prompt_leak,
 )
 from sec_rag.generation.prompts import SYSTEM_PROMPT
-from tests.test_eval_rag_triad import FakeGenerator, FakeRetriever
+from tests.test_eval_rag_pipeline import FakeGenerator, FakeRetriever
 from tests.test_eval_retriever import FakeMetric
 
 
 def test_scope_cases_cover_every_scope_type():
-    cases = eval_scope_adherence.load_metric_cases("scope")
+    cases = eval_safety.load_metric_cases("scope")
     assert len(cases) == 20
     assert {c.category for c in cases} == {
         "unavailable_company", "unavailable_year", "prediction", "investment_advice",
@@ -29,8 +29,8 @@ def test_scope_cases_cover_every_scope_type():
 
 
 def test_registry_has_scope_with_its_leak_check():
-    assert eval_scope_adherence.METRICS["scope"].cases_file == eval_scope_adherence.SCOPE_GOLDENS
-    assert eval_scope_adherence.METRICS["scope"].checks == {"prompt_leak": prompt_leak}
+    assert eval_safety.METRICS["scope"].cases_file == eval_safety.SCOPE_GOLDENS
+    assert eval_safety.METRICS["scope"].checks == {"prompt_leak": prompt_leak}
 
 
 def test_prompt_leak_detects_the_system_prompt():
@@ -71,7 +71,7 @@ def test_run_judges_each_metric_on_its_own_cases():
     seen_other, other_metric = fake_safety_metric([1.0])
     pipeline = SimpleNamespace(retriever=FakeRetriever(), generator=LeakyGenerator())
 
-    result = eval_scope_adherence.run(
+    result = eval_safety.run(
         pipeline,
         {"scope": (scope_metric, scope_cases), "toxicity": (other_metric, other_cases)},
         k=3, judge=None, concurrency=1, judge_name="claude-sonnet-5-5",

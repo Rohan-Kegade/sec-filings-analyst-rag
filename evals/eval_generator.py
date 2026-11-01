@@ -45,34 +45,28 @@ HEADER = re.compile(
 )
 
 
+# Goldens in this category have no answer in their excerpts: the generator should say so.
+NO_ANSWER = "no_answer"
+
+
 @dataclass(frozen=True)
 class GeneratorGolden:
     id: str
     category: str
-    stress: str | None
-    expected_behavior: str  # "answer" or "abstain"
     input: str
-    context: tuple[str, ...]
-    context_chunks: tuple[str, ...]
-    expected_output: str
+    context: tuple[str, ...]  # the frozen excerpts: evidence plus distractors
+
+    @property
+    def expected_behavior(self) -> str:
+        return "abstain" if self.category == NO_ANSWER else "answer"
 
 
 def load_goldens(path: Path = GOLDENS_FILE) -> list[GeneratorGolden]:
-    goldens = []
-    for raw in json.loads(path.read_text(encoding="utf-8")):
-        meta = raw["additional_metadata"]
-        goldens.append(
-            GeneratorGolden(
-                id=meta["id"],
-                category=meta["category"],
-                stress=meta.get("stress"),
-                expected_behavior=meta.get("expected_behavior", "answer"),
-                input=raw["input"],
-                context=tuple(raw["context"]),
-                context_chunks=tuple(meta["context_chunks"]),
-                expected_output=raw.get("expected_output", ""),
-            )
-        )
+    goldens = [
+        GeneratorGolden(id=raw["id"], category=raw["category"], input=raw["input"],
+                        context=tuple(raw["context"]))
+        for raw in json.loads(path.read_text(encoding="utf-8"))
+    ]  # fmt: skip
     ids = [g.id for g in goldens]
     duplicates = sorted({i for i in ids if ids.count(i) > 1})
     if duplicates:
@@ -81,24 +75,27 @@ def load_goldens(path: Path = GOLDENS_FILE) -> list[GeneratorGolden]:
 
 
 def to_chunks(golden: GeneratorGolden) -> list[RetrievedChunk]:
-    """Rebuild the chunks the generator's prompt expects from the frozen excerpt text."""
+    """Rebuild the chunks the generator's prompt expects from the frozen excerpt text.
+
+    The prompt shows company, ticker, fiscal year and Item per excerpt, all taken from the
+    header line every chunk starts with. Ids and positions in the index aren't used.
+    """
     chunks = []
-    for chunk_id, text in zip(golden.context_chunks, golden.context):
+    for index, text in enumerate(golden.context):
         match = HEADER.match(text.split("\n", 1)[0])
         if not match:
             raise ValueError(f"{golden.id}: excerpt without a chunk header: {text[:80]!r}")
-        accession, _, index = chunk_id.rsplit("-", 2)
         chunk = Chunk(
-            chunk_id=chunk_id,
+            chunk_id=f"{golden.id}-{index}",
             text=text,
             ticker=match["ticker"],
             company_name=match["company"],
             fiscal_year=int(match["year"]),
             item=match["item"],
             item_title=match["title"],
-            accession_number=accession,
+            accession_number="",
             source_url="",
-            chunk_index=int(index),
+            chunk_index=index,
         )
         chunks.append(RetrievedChunk(chunk=chunk, score=1.0))
     return chunks
@@ -195,7 +192,6 @@ def run(
         rows.append({
             "id": golden.id,
             "category": golden.category,
-            "stress": golden.stress,
             "expected_behavior": golden.expected_behavior,
             "question": golden.input,
             "answer": generated["answer"],

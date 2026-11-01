@@ -1,13 +1,13 @@
 """Evals (DeepEval), one file per eval, in four levels:
 
     1. component    eval_retriever, eval_generator
-    2. pipeline     eval_rag_triad
+    2. pipeline     eval_rag_pipeline
     3. application  quality:    eval_application (style: skipped)
-                    safety:     eval_scope_adherence (toxicity, leakage: TODO)
+                    safety:     eval_safety (toxicity, leakage: TODO)
                     operations: latency, cost, tokens (TODO)
     4. regression   the whole suite against a previous run (TODO)
 
-Run one with `python -m evals.<file> run`, e.g. `python -m evals.eval_rag_triad run`.
+Run one with `python -m evals.<file> run`, e.g. `python -m evals.eval_rag_pipeline run`.
 """
 
 import os

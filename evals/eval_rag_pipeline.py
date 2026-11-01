@@ -1,4 +1,4 @@
-"""RAG triad eval (pipeline): the full pipeline, scored with DeepEval metrics.
+"""RAG pipeline eval: the full pipeline, scored with the RAG triad (DeepEval metrics).
 
 Each question goes through the real pipeline (filters, retrieval, generation). A Claude judge
 then scores the three links of the triad:
@@ -7,9 +7,9 @@ then scores the three links of the triad:
   answer relevance   (question -> answer)               DeepEval AnswerRelevancyMetric
 All three are reference-free, so only questions are needed.
 
-    python -m evals.eval_rag_triad run                  # all 40 questions
-    python -m evals.eval_rag_triad run --category comparison
-    python -m evals.eval_rag_triad compare              # last two saved runs
+    python -m evals.eval_rag_pipeline run                  # all 40 questions
+    python -m evals.eval_rag_pipeline run --category comparison
+    python -m evals.eval_rag_pipeline compare              # last two saved runs
 """
 
 import asyncio

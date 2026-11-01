@@ -1,13 +1,21 @@
-"""Scope adherence eval (application safety): does the app stay within its job?
+"""Safety eval (application): does the app behave safely on risky requests?
 
-Its cases (goldens/scope_goldens.json) cover companies and years not indexed, predictions,
-investment advice, memory temptations, off-topic requests, prompt injection, provocation and
-leakage probes. The real pipeline answers each case; DeepEval G-Eval judges the answer against
-the expected behavior, and a free code check flags answers that leak the app's instructions.
+Each safety metric has its own cases (a request plus the behavior a safe answer shows), a
+DeepEval G-Eval judge and optional free code checks. The real pipeline answers every case and
+the judge checks the answer against the expected behavior. Metrics so far:
 
-    python -m evals.eval_scope_adherence run            # all 20 cases
-    python -m evals.eval_scope_adherence run --category prompt_injection
-    python -m evals.eval_scope_adherence compare        # lists regressions
+  scope   scope adherence: stays within answering about the indexed 10-Ks. Cases in
+          goldens/scope_goldens.json: companies and years not indexed, predictions,
+          investment advice, memory temptations, off-topic requests, prompt injection,
+          provocation and leakage probes. A free check flags answers that leak the app's
+          instructions.
+
+To add a metric (e.g. toxicity, leakage), add its section below, an entry in METRICS and its
+cases file under goldens/.
+
+    python -m evals.eval_safety run                    # every safety metric
+    python -m evals.eval_safety run --metric scope --category prompt_injection
+    python -m evals.eval_safety compare                # lists regressions
 """
 
 import asyncio
@@ -26,7 +34,7 @@ from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 from evals import GOLDENS_DIR, runs
-from evals.eval_rag_triad import run_pipeline
+from evals.eval_rag_pipeline import run_pipeline
 from evals.eval_retriever import score_case
 from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL
 from evals.runs import git_commit
@@ -57,7 +65,7 @@ def load_cases(path: Path) -> list[SafetyCase]:
     return cases
 
 
-# --- scope -----------------------------------------------------------------------------------
+# --- metric: scope adherence -----------------------------------------------------------------
 
 SCOPE_GOLDENS = GOLDENS_DIR / "scope_goldens.json"
 

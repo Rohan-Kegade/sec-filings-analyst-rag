@@ -49,9 +49,9 @@ sec-filings-analyst-rag/
 ├── evals/                     # One file per eval (levels: see Evaluation below)
 │   ├── eval_retriever.py      # 1. Contextual Recall / Precision
 │   ├── eval_generator.py      # 1. Faithfulness / Answer Relevancy on frozen contexts
-│   ├── eval_rag_triad.py      # 2. Context relevance, faithfulness, answer relevance
+│   ├── eval_rag_pipeline.py   # 2. Context relevance, faithfulness, answer relevance
 │   ├── eval_application.py    # 3. Quality: correctness, completeness
-│   ├── eval_scope_adherence.py  # 3. Safety: scope adherence
+│   ├── eval_safety.py         # 3. Safety: scope adherence (more metrics later)
 │   ├── judge.py               # ClaudeJudge: Claude as a DeepEval judge model
 │   └── runs.py                # Saving and loading eval runs (evals/runs/, not in git)
 ├── tests/                     # Unit tests (parser, chunker, prompts, chat)
@@ -96,9 +96,9 @@ components up to the whole suite:
 |---|---|---|
 | 1. Component | retriever | `evals/eval_retriever.py` |
 | | generator | `evals/eval_generator.py` |
-| 2. Pipeline | RAG triad: context relevance, faithfulness, answer relevance | `evals/eval_rag_triad.py` |
+| 2. Pipeline | RAG triad: context relevance, faithfulness, answer relevance | `evals/eval_rag_pipeline.py` |
 | 3. Application | quality: correctness, completeness (style skipped) | `evals/eval_application.py` |
-| | safety: scope adherence (toxicity, leakage TODO) | `evals/eval_scope_adherence.py` |
+| | safety: scope adherence (toxicity, leakage TODO, same file) | `evals/eval_safety.py` |
 | | operations: latency, cost, tokens | TODO |
 | 4. Regression | the whole suite against a baseline | TODO |
 
@@ -138,8 +138,10 @@ same-year distractors), so retrieval can't affect the scores. The generator
 - **Answer Relevancy**: share of the answer's statements that address the question.
 
 Besides the 40 regular questions, the goldens include partial-context, wrong-year,
-model-already-knows and no-answer cases. For no-answer cases the report also shows whether
-the answer said the excerpts don't contain the information (a simple text check).
+model-already-knows and no-answer cases. For no-answer cases (category `no_answer`) the
+report also shows whether the answer said the excerpts don't contain the information (a
+simple text check). Both metrics are reference-free, so a golden is just an id, a category,
+the question and its excerpts; no reference answer is needed.
 
 ```bash
 python -m evals.eval_generator run                     # all 54 goldens
@@ -166,9 +168,9 @@ case gets a diagnosis of the first failing link. (Out-of-scope questions have th
 eval, below.)
 
 ```bash
-python -m evals.eval_rag_triad run                         # all 40 questions
-python -m evals.eval_rag_triad run --category comparison
-python -m evals.eval_rag_triad compare
+python -m evals.eval_rag_pipeline run                         # all 40 questions
+python -m evals.eval_rag_pipeline run --category comparison
+python -m evals.eval_rag_pipeline compare
 ```
 
 Context relevance counts every statement in the excerpts, and 10-K chunks are long and only
@@ -209,24 +211,28 @@ generation. Runs are saved to `evals/runs/app/`.
 
 Style (tone, format, citations) is skipped for now.
 
-#### Safety: scope adherence
+#### Safety
 
-Does the app stay within its job, answering questions about the indexed 10-Ks? Each case is
-a request plus the behavior a safe answer shows; the real pipeline answers it and a G-Eval
-judge checks the answer against that behavior. The 20 cases in `goldens/scope_goldens.json`
-cover companies and years not indexed, predictions, investment advice, facts the model may
-"know" but the filings don't contain, off-topic requests, prompt injection, provocation
-(toxicity), and system-prompt and data leakage probes. A free code check also flags answers
-that reproduce sentences of the app's own instructions.
+All safety metrics live in `evals/eval_safety.py`. Each has its own cases (a request plus the
+behavior a safe answer shows), a G-Eval judge and optional free code checks; the real pipeline
+answers every case and the judge checks the answer against that behavior. Metrics so far:
+
+- **Scope adherence** (`--metric scope`): does the app stay within its job, answering
+  questions about the indexed 10-Ks? The 20 cases in `goldens/scope_goldens.json` cover
+  companies and years not indexed, predictions, investment advice, facts the model may "know"
+  but the filings don't contain, off-topic requests, prompt injection, provocation (toxicity),
+  and system-prompt and data leakage probes. A free code check also flags answers that
+  reproduce sentences of the app's own instructions.
 
 ```bash
-python -m evals.eval_scope_adherence run                            # all 20 cases
-python -m evals.eval_scope_adherence run --category prompt_injection
-python -m evals.eval_scope_adherence compare                        # lists regressions
+python -m evals.eval_safety run                            # every safety metric
+python -m evals.eval_safety run --metric scope --category prompt_injection
+python -m evals.eval_safety compare                        # lists regressions
 ```
 
-About $0.005 per case with the Sonnet judge, plus generation. Runs are saved to
-`evals/runs/safety/`. Toxicity and leakage as their own metrics are TODO.
+To add a metric (toxicity and leakage are TODO), add an entry to `METRICS` in
+`evals/eval_safety.py` and its cases file under `goldens/`. About $0.005 per case with the
+Sonnet judge, plus generation. Runs are saved to `evals/runs/safety/`.
 
 #### Operations (TODO)
 

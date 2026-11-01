@@ -43,17 +43,11 @@ class Golden:
 
 
 def load_goldens(path: Path = GOLDENS_FILE) -> list[Golden]:
-    goldens = []
-    for raw in json.loads(path.read_text(encoding="utf-8")):
-        meta = raw["additional_metadata"]
-        goldens.append(
-            Golden(
-                id=meta["id"],
-                category=meta["category"],
-                input=raw["input"],
-                expected_output=raw["expected_output"],
-            )
-        )
+    goldens = [
+        Golden(id=raw["id"], category=raw["category"], input=raw["input"],
+               expected_output=raw["expected_output"])
+        for raw in json.loads(path.read_text(encoding="utf-8"))
+    ]  # fmt: skip
     ids = [g.id for g in goldens]
     duplicates = sorted({i for i in ids if ids.count(i) > 1})
     if duplicates:

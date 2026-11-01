@@ -27,7 +27,7 @@ from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 from evals import GOLDENS_DIR, runs
-from evals.eval_rag_triad import run_pipeline
+from evals.eval_rag_pipeline import run_pipeline
 from evals.eval_retriever import score_case
 from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL
 from evals.runs import git_commit

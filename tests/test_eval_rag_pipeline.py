@@ -1,11 +1,11 @@
-"""RAG triad eval: questions, pipeline run, diagnosis and scoring, with fakes (no API calls)."""
+"""RAG pipeline eval (RAG triad): questions, pipeline run, diagnosis and scoring, with fakes."""
 
 from types import SimpleNamespace
 
 import pytest
 
-from evals import eval_rag_triad
-from evals.eval_rag_triad import Question, load_questions
+from evals import eval_rag_pipeline
+from evals.eval_rag_pipeline import Question, load_questions
 from sec_rag.models import RetrievedChunk
 from sec_rag.pipeline import NO_RESULTS
 from tests.test_eval_retriever import FakeMetric
@@ -62,7 +62,7 @@ def test_run_scores_the_triad_and_diagnoses_failures():
         seen.append(metrics)
         return metrics
 
-    result = eval_rag_triad.run(pipeline, QUESTIONS, k=3, metric_factory=factory, concurrency=2,
+    result = eval_rag_pipeline.run(pipeline, QUESTIONS, k=3, metric_factory=factory, concurrency=2,
                         judge_name="claude-sonnet-5-5")  # fmt: skip
     rows = {r["id"]: r for r in result["cases"]}
 
@@ -90,6 +90,6 @@ def test_run_scores_the_triad_and_diagnoses_failures():
 ])  # fmt: skip
 def test_diagnose_checks_links_in_pipeline_order(scores, expected):
     row = {"generation_error": None, "sources": ["s"]}
-    for metric, score in zip(eval_rag_triad.METRICS, scores):
+    for metric, score in zip(eval_rag_pipeline.METRICS, scores):
         row[metric] = {"score": score}
-    assert eval_rag_triad.diagnose(row) == expected
+    assert eval_rag_pipeline.diagnose(row) == expected

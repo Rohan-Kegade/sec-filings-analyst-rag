@@ -16,15 +16,17 @@ def test_goldens_file_loads_and_every_excerpt_parses():
         assert len(chunks) == len(golden.context) >= 4
 
 
-def golden(gid="g1", behavior="answer", context=None, chunk_ids=None):
+def golden(gid="g1", category="fact", context=None):
     context = context or (
         "Microsoft Corporation (MSFT) 10-K FY2024 - Item 1: Business\n\nWe employed 228,000.",
     )
-    return GeneratorGolden(
-        id=gid, category="fact", stress=None, expected_behavior=behavior,
-        input=f"Question {gid}?", context=tuple(context),
-        context_chunks=tuple(chunk_ids or ["0000950170-24-087843-1-20"]), expected_output="",
-    )  # fmt: skip
+    return GeneratorGolden(id=gid, category=category, input=f"Question {gid}?",
+                           context=tuple(context))  # fmt: skip
+
+
+def test_no_answer_category_means_abstain():
+    assert golden(category="no_answer").expected_behavior == "abstain"
+    assert golden(category="partial").expected_behavior == "answer"
 
 
 def test_to_chunks_restores_metadata_from_the_header():
@@ -33,7 +35,7 @@ def test_to_chunks_restores_metadata_from_the_header():
         "Microsoft Corporation", "MSFT", 2024
     )  # fmt: skip
     assert (chunk.item, chunk.item_title) == ("1", "Business")
-    assert chunk.accession_number == "0000950170-24-087843" and chunk.chunk_index == 20
+    assert chunk.chunk_id == "g1-0" and chunk.chunk_index == 0
 
 
 def test_to_chunks_rejects_excerpts_without_header():
@@ -67,7 +69,7 @@ class FakeGenerator:
 
 
 def test_run_generates_from_frozen_context_and_scores():
-    goldens = [golden("ok"), golden("empty", behavior="abstain"), golden("broken")]
+    goldens = [golden("ok"), golden("empty", category="no_answer"), golden("broken")]
     generator, seen = FakeGenerator(), []
 
     def factory():

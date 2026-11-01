@@ -13,7 +13,7 @@ from evals.eval_application import (
     AppGolden,
     load_goldens,
 )
-from tests.test_eval_rag_triad import FakeGenerator, FakeRetriever
+from tests.test_eval_rag_pipeline import FakeGenerator, FakeRetriever
 from tests.test_eval_retriever import FakeMetric
 
 NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
@@ -26,7 +26,7 @@ def numbers(text: str) -> set[str]:
 
 def full_references() -> dict[str, dict]:
     raw = json.loads((GOLDENS_DIR / "retrieval_goldens.json").read_text(encoding="utf-8"))
-    return {r["additional_metadata"]["id"]: r for r in raw}
+    return {r["id"]: r for r in raw}
 
 
 def test_goldens_load():
@@ -42,7 +42,7 @@ def test_goldens_match_the_retrieval_goldens():
     assert {g.id for g in goldens} == set(full)
     for g in goldens:
         assert g.input == full[g.id]["input"], g.id
-        assert g.category == full[g.id]["additional_metadata"]["category"], g.id
+        assert g.category == full[g.id]["category"], g.id
 
 
 def test_references_add_no_numbers_beyond_the_full_reference():
