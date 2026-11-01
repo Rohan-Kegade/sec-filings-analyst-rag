@@ -1,8 +1,8 @@
-"""Commands: correctness, compare-correctness.
+"""Commands: run, compare.
 
-    python -m evaluation.app_eval correctness                     # all 45 goldens
-    python -m evaluation.app_eval correctness --category fact --limit 3
-    python -m evaluation.app_eval compare-correctness             # last two saved runs
+    python -m evaluation.app_eval run                                  # all metrics, 45 goldens
+    python -m evaluation.app_eval run --metric completeness --category qualitative
+    python -m evaluation.app_eval compare                              # last two saved runs
 """
 
 import logging
@@ -31,34 +31,41 @@ def _pct(value) -> str:
 
 
 def print_report(result: dict) -> None:
-    s, g = result["settings"], result["goldens"]
+    s, g, names = result["settings"], result["goldens"], result["metrics"]
     typer.echo(
         f"Pipeline: {s['retrieval_mode']} retrieval, k={s['k']}, generator {s['generator']} | "
         f"judge {s['judge']} | goldens {g['total']} ({g['approved']} approved)"
     )
 
-    typer.echo(f"\n{'category':>13} {'n':>3} {'score':>7} {f'correct (>={runner.PASS})':>17} "
-               f"{'key numbers':>12}")  # fmt: skip
-    for name, m in [*result["by_category"].items(), ("ALL", result["summary"])]:
-        typer.echo(f"{name:>13} {m['cases']:>3} {_fmt(m['correctness']):>7} "
-                   f"{_pct(m['correct']):>17} {_pct(m['key_numbers_found']):>12}")  # fmt: skip
-    if result["summary"]["errors"]:
-        typer.echo(f"\n{result['summary']['errors']} cases could not be scored; see the saved run.")
+    header = " ".join(f"{name[:12]:>12} {'pass':>5}" for name in names)
+    numbers = "correctness" in names
+    typer.echo(f"\n{'category':>13} {'n':>3} {header}" + (f" {'key nums':>9}" if numbers else ""))
+    for category, m in [*result["by_category"].items(), ("ALL", result["summary"])]:
+        cells = " ".join(f"{_fmt(m[n]['score']):>12} {_pct(m[n]['passed']):>5}" for n in names)
+        extra = f" {_pct(m['key_numbers_found']):>9}" if numbers else ""
+        typer.echo(f"{category:>13} {m['cases']:>3} {cells}{extra}")
+    typer.echo(f"(pass = score >= {runner.PASS}; '-' where a metric doesn't apply)")
 
-    scored = [r for r in result["cases"] if r["correctness"]["score"] is not None]
-    wrong = [r for r in scored if r["correctness"]["score"] < runner.PASS]
-    if wrong:
-        typer.echo(f"\nIncorrect answers (score < {runner.PASS}):")
-        for r in sorted(wrong, key=lambda r: r["correctness"]["score"]):
-            numbers = (f", key numbers {r['key_numbers_found']}/{r['key_numbers_total']}"
-                       if r["key_numbers_total"] else "")  # fmt: skip
-            typer.echo(f"\n  [{r['id']}] score {_fmt(r['correctness']['score'], 2)}{numbers}")
-            typer.echo(f"     judge: {(r['correctness']['reason'] or '')[:260]}")
-            typer.echo(f"     answer: {(r['answer'] or '')[:200]!r}")
+    errors = sum(result["summary"][n]["errors"] for n in names)
+    if errors:
+        typer.echo(f"\n{errors} scores could not be computed; see the saved run.")
+
+    for name in names:
+        weak = [r for r in result["cases"]
+                if r[name]["score"] is not None and r[name]["score"] < runner.PASS]  # fmt: skip
+        if not weak:
+            continue
+        typer.echo(f"\n{name}: answers below {runner.PASS}")
+        for r in sorted(weak, key=lambda r: r[name]["score"]):
+            typer.echo(f"  [{r['id']}] {_fmt(r[name]['score'], 2)}: "
+                       f"{(r[name]['reason'] or '')[:240]}")  # fmt: skip
 
 
 @app.command()
-def correctness(
+def run(
+    metric: list[str] = typer.Option(
+        list(runner.METRICS), help=f"Metrics to score: {', '.join(runner.METRICS)}"
+    ),
     k: int = typer.Option(8, help="Chunks retrieved per question"),
     limit: int = typer.Option(0, help="Only the first N goldens (0 = all)"),
     category: list[str] = typer.Option(None, help="Only these categories"),
@@ -71,13 +78,15 @@ def correctness(
         DEFAULT_JUDGE_EFFORT, help="Judge effort: low, medium, high (default: SEC_RAG_JUDGE_EFFORT)"
     ),
     concurrency: int = typer.Option(4, help="Answers generated / judged in parallel"),
-    save: bool = typer.Option(True, help="Save the run for `compare-correctness`"),
+    save: bool = typer.Option(True, help="Save the run for `compare`"),
 ):
-    """Run the real pipeline and score answer correctness against the goldens."""
-    from evaluation.app_eval.correctness import correctness_metric
+    """Run the real pipeline once and score the selected metrics on its answers."""
     from evaluation.judge import ClaudeJudge
     from sec_rag.pipeline import RAGPipeline
 
+    unknown = [m for m in metric if m not in runner.METRICS]
+    if unknown:
+        raise typer.BadParameter(f"unknown metric(s) {unknown}; choose from {list(runner.METRICS)}")
     goldens = [
         gold for gold in load_goldens()
         if (not category or gold.category in category)
@@ -95,7 +104,8 @@ def correctness(
         pipeline,
         goldens,
         k,
-        metric_factory=lambda: {"correctness": correctness_metric(judge)},
+        metrics={name: runner.METRICS[name] for name in metric},
+        judge=judge,
         concurrency=concurrency,
         judge_name=judge_model,
     )
@@ -106,9 +116,9 @@ def correctness(
         typer.echo(f"Saved {runs.save(result, runner.RUN_KIND)}")
 
 
-@app.command("compare-correctness")
-def compare_correctness(before: Path = typer.Argument(None), after: Path = typer.Argument(None)):
-    """Compare two saved correctness runs (default: the last two)."""
+@app.command()
+def compare(before: Path = typer.Argument(None), after: Path = typer.Argument(None)):
+    """Compare two saved runs (default: the last two)."""
     if before is None or after is None:
         saved = runs.list_runs(runner.RUN_KIND)
         if len(saved) < 2:
@@ -120,29 +130,33 @@ def compare_correctness(before: Path = typer.Argument(None), after: Path = typer
         if a["settings"].get(key) != value:
             typer.echo(f"  setting {key}: {a['settings'].get(key)} -> {value}")
 
-    typer.echo(f"\n{'category':>13} {'score':>17} {'correct':>9}")
-    for name in [*b["by_category"], "ALL"]:
-        new = b["summary"] if name == "ALL" else b["by_category"][name]
-        old = a["summary"] if name == "ALL" else a["by_category"].get(name)
+    names = [n for n in b["metrics"] if n in a["metrics"]]
+    typer.echo(f"\n{'category':>13} " + " ".join(f"{n:>19}" for n in names))
+    for category in [*b["by_category"], "ALL"]:
+        new = b["summary"] if category == "ALL" else b["by_category"][category]
+        old = a["summary"] if category == "ALL" else a["by_category"].get(category)
         if old is None:
             continue
-        o, n = old["correctness"], new["correctness"]
-        delta = "" if o is None or n is None else f" ({n - o:+.3f})"
-        typer.echo(f"{name:>13} {_fmt(n) + delta:>17} {_pct(new['correct']):>9}")
+        cells = []
+        for n in names:
+            o, v = old[n]["score"], new[n]["score"]
+            cells.append(f"{_fmt(v)}{'' if o is None or v is None else f' ({v - o:+.3f})'}")
+        typer.echo(f"{category:>13} " + " ".join(f"{c:>19}" for c in cells))
     typer.echo(f"(changes under ±{NOISE} are likely judge noise)")
 
     old_rows = {r["id"]: r for r in a["cases"]}
-    moves = []
-    for r in b["cases"]:
-        o = old_rows.get(r["id"])
-        if o and o["correctness"]["score"] is not None and r["correctness"]["score"] is not None:
-            delta = r["correctness"]["score"] - o["correctness"]["score"]
-            if abs(delta) >= 0.1:
-                moves.append((delta, r["id"]))
-    if moves:
-        typer.echo("\ncorrectness changes of 0.1 or more:")
-        for delta, case_id in sorted(moves):
-            typer.echo(f"  {delta:+.2f}  {case_id}")
+    for n in names:
+        moves = []
+        for r in b["cases"]:
+            o = old_rows.get(r["id"])
+            if o and o[n]["score"] is not None and r[n]["score"] is not None:
+                delta = r[n]["score"] - o[n]["score"]
+                if abs(delta) >= 0.1:
+                    moves.append((delta, r["id"]))
+        if moves:
+            typer.echo(f"\n{n} changes of 0.1 or more:")
+            for delta, case_id in sorted(moves):
+                typer.echo(f"  {delta:+.2f}  {case_id}")
 
 
 if __name__ == "__main__":

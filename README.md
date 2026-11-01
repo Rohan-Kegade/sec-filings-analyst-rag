@@ -157,27 +157,30 @@ partly on-topic, so its scores run low; compare it between runs rather than read
 absolute grade. About $0.11 per question with the Sonnet judge (context relevance reads every
 excerpt). The judge caps itself at 4 concurrent requests and retries rate limits.
 
-## Application evaluation: correctness (DeepEval)
+## Application evaluation: correctness and completeness (DeepEval)
 
-Runs each golden's question through the full pipeline and checks the answer against the
-golden's reference answer and **key facts** (the facts that decide whether an answer is right,
-e.g. "approximately 228,000 full-time employees"). The 40 goldens store `key_facts` next to
-their reference answers in `retrieval_goldens.json`; the 5 out-of-scope questions have
-reference answers and key facts in `out_of_scope_goldens.json`.
+Runs each golden's question through the full pipeline **once**, then scores the answers with
+each selected metric (DeepEval G-Eval with fixed steps):
 
-- **Correctness** (DeepEval G-Eval with fixed steps): key facts stated correctly; wrong
-  numbers, years or companies and contradictions are penalized; extra details not in the
-  reference are not; out-of-scope questions must decline instead of inventing an answer.
-- **Key numbers**: a free code check that the key facts' numbers appear in the answer.
+| Metric | Golden field | Asks |
+|---|---|---|
+| **Correctness** | `key_facts`: what must be right | Are the key facts stated correctly, with no wrong numbers, years, companies or contradictions? Out-of-scope questions must decline instead of inventing an answer. |
+| **Completeness** | `required_points`: what must be covered | Does the answer cover everything the question asks for? Coverage only; accuracy is correctness's job. Not applied to out-of-scope questions. |
+
+Neither penalizes extra details beyond the reference. A free code check also reports whether
+the key facts' numbers appear in the answer. The 40 goldens store `key_facts` and
+`required_points` next to their reference answers in `retrieval_goldens.json`; the 5
+out-of-scope questions are in `out_of_scope_goldens.json`.
 
 ```bash
-python -m evaluation.app_eval correctness                  # all 45 goldens
-python -m evaluation.app_eval correctness --category fact
-python -m evaluation.app_eval compare-correctness
+python -m evaluation.app_eval run                             # all metrics, 45 goldens
+python -m evaluation.app_eval run --metric completeness --category qualitative
+python -m evaluation.app_eval compare                         # last two runs
 ```
 
 Correctness is defined by the filings: the reference is what the company's 10-K for that
-fiscal year states. About $0.005 per golden with the Sonnet judge, plus generation.
+fiscal year states. About $0.01 per golden for both metrics with the Sonnet judge, plus
+generation. Runs are saved to `evaluation/runs/app/`.
 
 ## Hybrid search
 

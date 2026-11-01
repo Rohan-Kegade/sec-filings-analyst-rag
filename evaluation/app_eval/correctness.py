@@ -10,7 +10,7 @@ from deepeval.metrics import GEval
 from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import SingleTurnParams
 
-from evaluation.app_eval.goldens import CorrectnessGolden
+from evaluation.app_eval.goldens import AppGolden
 
 EVALUATION_STEPS = [
     "Read the question, the expected output (a reference answer based on the company's 10-K "
@@ -30,7 +30,7 @@ EVALUATION_STEPS = [
 _NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 
-def expected_with_key_facts(golden: CorrectnessGolden) -> str:
+def expected_with_key_facts(golden: AppGolden) -> str:
     """The reference answer followed by its key facts, as the judge sees it."""
     facts = "\n".join(f"- {fact}" for fact in golden.key_facts)
     return f"{golden.expected_output}\n\nKey facts:\n{facts}"
@@ -54,11 +54,11 @@ def _normalize_number(token: str) -> str:
     return token[:-2] if token.endswith(".0") else token  # "$95.0 billion" == "$95 billion"
 
 
-def key_numbers(golden: CorrectnessGolden) -> set[str]:
+def key_numbers(golden: AppGolden) -> set[str]:
     return {_normalize_number(n) for fact in golden.key_facts for n in _NUMBER.findall(fact)}
 
 
-def number_check(golden: CorrectnessGolden, answer: str | None) -> tuple[int, int]:
+def number_check(golden: AppGolden, answer: str | None) -> tuple[int, int]:
     """(numbers from the key facts found in the answer, total). A free, exact pre-check."""
     expected = key_numbers(golden)
     found = {_normalize_number(n) for n in _NUMBER.findall(answer or "")}
