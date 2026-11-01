@@ -50,6 +50,7 @@ sec-filings-analyst-rag/
 │   ├── retrieval_eval/        # DeepEval Contextual Recall / Precision with a Claude judge
 │   ├── generator_eval/        # DeepEval Faithfulness / Answer Relevancy on frozen contexts
 │   ├── rag_eval/              # RAG triad on the full pipeline (context/answer relevance, groundedness)
+│   ├── app_eval/              # Application evals on the full pipeline (correctness so far)
 │   ├── judge.py               # ClaudeJudge: Claude as a DeepEval judge model
 │   └── run_eval.py            # Quick free check: section + exact-term hits per mode
 ├── tests/                     # Unit tests (parser, chunker, prompts, chat)
@@ -141,7 +142,7 @@ scores the three links of the triad with the judge:
 | Answer relevance (question → answer) | `AnswerRelevancyMetric` | an off-target answer |
 
 All three are reference-free, so only questions are needed: the 40 golden questions plus
-5 out-of-scope ones in `evaluation/goldens/rag_questions.json` (an unindexed company, a year
+5 out-of-scope ones in `evaluation/goldens/out_of_scope_goldens.json` (an unindexed company, a year
 not downloaded, a long-range forecast, investment advice). Each case gets a diagnosis of
 the first failing link, and out-of-scope questions are checked for not answering.
 
@@ -155,6 +156,28 @@ Context relevance counts every statement in the excerpts, and 10-K chunks are lo
 partly on-topic, so its scores run low; compare it between runs rather than reading it as an
 absolute grade. About $0.11 per question with the Sonnet judge (context relevance reads every
 excerpt). The judge caps itself at 4 concurrent requests and retries rate limits.
+
+## Application evaluation: correctness (DeepEval)
+
+Runs each golden's question through the full pipeline and checks the answer against the
+golden's reference answer and **key facts** (the facts that decide whether an answer is right,
+e.g. "approximately 228,000 full-time employees"). The 40 goldens store `key_facts` next to
+their reference answers in `retrieval_goldens.json`; the 5 out-of-scope questions have
+reference answers and key facts in `out_of_scope_goldens.json`.
+
+- **Correctness** (DeepEval G-Eval with fixed steps): key facts stated correctly; wrong
+  numbers, years or companies and contradictions are penalized; extra details not in the
+  reference are not; out-of-scope questions must decline instead of inventing an answer.
+- **Key numbers**: a free code check that the key facts' numbers appear in the answer.
+
+```bash
+python -m evaluation.app_eval correctness                  # all 45 goldens
+python -m evaluation.app_eval correctness --category fact
+python -m evaluation.app_eval compare-correctness
+```
+
+Correctness is defined by the filings: the reference is what the company's 10-K for that
+fiscal year states. About $0.005 per golden with the Sonnet judge, plus generation.
 
 ## Hybrid search
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from evaluation.retrieval_eval.goldens import load_goldens
 
-OUT_OF_SCOPE_FILE = Path(__file__).parents[1] / "goldens" / "rag_questions.json"
+OUT_OF_SCOPE_FILE = Path(__file__).parents[1] / "goldens" / "out_of_scope_goldens.json"
 
 
 @dataclass(frozen=True)
