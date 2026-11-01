@@ -49,6 +49,7 @@ sec-filings-analyst-rag/
 │   ├── goldens/               # 40 retrieval goldens (DeepEval format, with source quotes)
 │   ├── retrieval_eval/        # DeepEval Contextual Recall / Precision with a Claude judge
 │   ├── generator_eval/        # DeepEval Faithfulness / Answer Relevancy on frozen contexts
+│   ├── rag_eval/              # RAG triad on the full pipeline (context/answer relevance, groundedness)
 │   ├── judge.py               # ClaudeJudge: Claude as a DeepEval judge model
 │   └── run_eval.py            # Quick free check: section + exact-term hits per mode
 ├── tests/                     # Unit tests (parser, chunker, prompts, chat)
@@ -127,6 +128,33 @@ python -m evaluation.generator_eval compare                 # last two runs
 
 Roughly $0.04 per golden for the Sonnet judge, plus generation. Runs are saved to
 `evaluation/runs/generator/`.
+
+## End-to-end evaluation: the RAG triad (DeepEval)
+
+Runs each question through the real pipeline (filters, hybrid retrieval, generation) and
+scores the three links of the triad with the judge:
+
+| Triad metric | DeepEval metric | Low score points to |
+|---|---|---|
+| Context relevance (question → excerpts) | `ContextualRelevancyMetric` | retrieval |
+| Groundedness (excerpts → answer) | `FaithfulnessMetric` | the generator making things up |
+| Answer relevance (question → answer) | `AnswerRelevancyMetric` | an off-target answer |
+
+All three are reference-free, so only questions are needed: the 40 golden questions plus
+5 out-of-scope ones in `evaluation/goldens/rag_questions.json` (an unindexed company, a year
+not downloaded, a long-range forecast, investment advice). Each case gets a diagnosis of
+the first failing link, and out-of-scope questions are checked for not answering.
+
+```bash
+python -m evaluation.rag_eval run                         # all 45 questions
+python -m evaluation.rag_eval run --category out_of_scope
+python -m evaluation.rag_eval compare
+```
+
+Context relevance counts every statement in the excerpts, and 10-K chunks are long and only
+partly on-topic, so its scores run low; compare it between runs rather than reading it as an
+absolute grade. About $0.11 per question with the Sonnet judge (context relevance reads every
+excerpt). The judge caps itself at 4 concurrent requests and retries rate limits.
 
 ## Hybrid search
 

@@ -89,6 +89,32 @@ def test_judge_model_and_effort_come_from_env(monkeypatch):
     assert (configured.judge_model, configured.judge_effort) == ("claude-opus-5-5", "high")
 
 
+def test_judge_caps_concurrent_requests():
+    """Metrics may fire many judge calls at once; at most max_concurrent_requests run."""
+    in_flight = peak = 0
+
+    class SlowMessages:
+        async def create(self, **kwargs):
+            nonlocal in_flight, peak
+            in_flight += 1
+            peak = max(peak, in_flight)
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+            return fake_message(text="ok")
+
+    judge = ClaudeJudge(
+        client=SimpleNamespace(beta=SimpleNamespace(messages=FakeMessages(None))),
+        async_client=SimpleNamespace(beta=SimpleNamespace(messages=SlowMessages())),
+        max_concurrent_requests=3,
+    )
+
+    async def burst():
+        return await asyncio.gather(*(judge.a_generate("p") for _ in range(12)))
+
+    assert asyncio.run(burst()) == ["ok"] * 12
+    assert peak == 3
+
+
 def test_judge_async_and_text_paths_count_tokens():
     judge, _, aio = make_judge(fake_message(text="plain answer"))
     assert asyncio.run(judge.a_generate("prompt")) == "plain answer"

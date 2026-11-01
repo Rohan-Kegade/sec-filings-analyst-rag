@@ -1,5 +1,7 @@
 """Claude as a DeepEval judge model."""
 
+import asyncio
+
 import anthropic
 from deepeval.models import DeepEvalBaseLLM
 from pydantic import BaseModel
@@ -13,6 +15,11 @@ DEFAULT_JUDGE_EFFORT = settings.judge_effort
 # $ per million input/output tokens, for the cost estimate printed after a run.
 PRICES = {"claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0),
           "claude-haiku-5-5": (0.10, 0.50)}  # fmt: skip
+# Some metrics (e.g. Contextual Relevancy) make one judge call per excerpt, all at once, which
+# can exceed the account's concurrent-request limit (HTTP 429). Cap in-flight calls and let
+# the SDK retry rate-limited requests longer than its default 2 times.
+MAX_CONCURRENT_REQUESTS = 4
+MAX_RETRIES = 6
 
 
 class ClaudeJudge(DeepEvalBaseLLM):
@@ -30,19 +37,33 @@ class ClaudeJudge(DeepEvalBaseLLM):
         max_tokens: int = 8000,
         client: anthropic.Anthropic | None = None,
         async_client: anthropic.AsyncAnthropic | None = None,
+        max_concurrent_requests: int = MAX_CONCURRENT_REQUESTS,
     ):
         self.effort = effort
         self.max_tokens = max_tokens
         self._client = client
         self.async_client = async_client or anthropic.AsyncAnthropic(
-            api_key=settings.anthropic_api_key
+            api_key=settings.anthropic_api_key, max_retries=MAX_RETRIES
         )
+        self.max_concurrent_requests = max_concurrent_requests
+        self._limit: asyncio.Semaphore | None = None
+        self._limit_loop: asyncio.AbstractEventLoop | None = None
         self.input_tokens = 0
         self.output_tokens = 0
         super().__init__(model)  # sets self.name and calls load_model()
 
     def load_model(self) -> anthropic.Anthropic:
-        return self._client or anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        return self._client or anthropic.Anthropic(
+            api_key=settings.anthropic_api_key, max_retries=MAX_RETRIES
+        )
+
+    def _concurrency_limit(self) -> asyncio.Semaphore:
+        # A semaphore belongs to one event loop; make a new one if the loop changed.
+        loop = asyncio.get_running_loop()
+        if self._limit is None or self._limit_loop is not loop:
+            self._limit = asyncio.Semaphore(self.max_concurrent_requests)
+            self._limit_loop = loop
+        return self._limit
 
     def get_model_name(self) -> str:
         return self.name
@@ -78,10 +99,11 @@ class ClaudeJudge(DeepEvalBaseLLM):
 
     async def a_generate(self, prompt: str, schema: type[BaseModel] | None = None):
         messages = self.async_client.beta.messages
-        if schema is not None:
-            message = await messages.parse(**self._request(prompt), output_format=schema)
-            return self._result(message, schema)
-        return self._result(await messages.create(**self._request(prompt)), None)
+        async with self._concurrency_limit():
+            if schema is not None:
+                message = await messages.parse(**self._request(prompt), output_format=schema)
+                return self._result(message, schema)
+            return self._result(await messages.create(**self._request(prompt)), None)
 
     def cost_summary(self) -> str:
         summary = f"judge tokens: {self.input_tokens:,} in / {self.output_tokens:,} out"
