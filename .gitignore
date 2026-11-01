@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 venv/
 .env
+.claude/settings.local.json
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
