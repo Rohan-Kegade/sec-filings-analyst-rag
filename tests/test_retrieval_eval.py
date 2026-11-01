@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from evaluation.retrieval_eval import runner
 from evaluation.retrieval_eval.goldens import Golden, load_goldens
 from evaluation.retrieval_eval.judge import ClaudeJudge
+from sec_rag.config import Settings, settings
 from sec_rag.generation.llm import FALLBACK_BETA
 from sec_rag.models import RetrievedChunk
 from tests.test_keyword_index import make_chunk
@@ -73,12 +74,19 @@ def test_judge_returns_schema_instance_and_sends_no_temperature():
     judge, sync, _ = make_judge(fake_message(parsed=Verdict(verdict="yes")))
     assert judge.generate("prompt", schema=Verdict) == Verdict(verdict="yes")
     request = sync.calls[0]
-    assert request["model"] == "claude-sonnet-5-5"
+    assert request["model"] == settings.judge_model
     assert request["output_format"] is Verdict
     assert request["thinking"] == {"type": "adaptive"}
     assert request["output_config"] == {"effort": "medium"}
     assert request["betas"] == [FALLBACK_BETA] and request["fallbacks"] == "default"
     assert "temperature" not in request
+
+
+def test_judge_model_and_effort_come_from_env(monkeypatch):
+    monkeypatch.setenv("SEC_RAG_JUDGE_MODEL", "claude-opus-5-5")
+    monkeypatch.setenv("SEC_RAG_JUDGE_EFFORT", "high")
+    configured = Settings(_env_file=None)
+    assert (configured.judge_model, configured.judge_effort) == ("claude-opus-5-5", "high")
 
 
 def test_judge_async_and_text_paths_count_tokens():

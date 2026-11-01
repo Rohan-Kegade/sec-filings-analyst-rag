@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Chat
     chat_history_turns: int = 3  # earlier question/answer pairs sent with a follow-up
 
+    # Evaluation (LLM judge for evaluation/retrieval_eval)
+    judge_model: str = "claude-sonnet-5-5"
+    judge_effort: str = "medium"  # low | medium | high
+
     @property
     def chat_db_path(self) -> Path:
         return self.data_dir / "chats.db"

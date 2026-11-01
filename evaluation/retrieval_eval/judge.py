@@ -7,7 +7,9 @@ from pydantic import BaseModel
 from sec_rag.config import settings
 from sec_rag.generation.llm import FALLBACK_BETA
 
-DEFAULT_JUDGE_MODEL = "claude-sonnet-5-5"
+# Override with SEC_RAG_JUDGE_MODEL / SEC_RAG_JUDGE_EFFORT in .env or the environment.
+DEFAULT_JUDGE_MODEL = settings.judge_model
+DEFAULT_JUDGE_EFFORT = settings.judge_effort
 # $ per million input/output tokens, for the cost estimate printed after a run.
 PRICES = {"claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0),
           "claude-haiku-5-5": (0.10, 0.50)}  # fmt: skip
@@ -24,7 +26,7 @@ class ClaudeJudge(DeepEvalBaseLLM):
     def __init__(
         self,
         model: str = DEFAULT_JUDGE_MODEL,
-        effort: str = "medium",
+        effort: str = DEFAULT_JUDGE_EFFORT,
         max_tokens: int = 8000,
         client: anthropic.Anthropic | None = None,
         async_client: anthropic.AsyncAnthropic | None = None,

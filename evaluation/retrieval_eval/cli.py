@@ -12,7 +12,7 @@ import typer
 
 from evaluation.retrieval_eval import runner
 from evaluation.retrieval_eval.goldens import load_goldens
-from evaluation.retrieval_eval.judge import DEFAULT_JUDGE_MODEL
+from evaluation.retrieval_eval.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL
 
 app = typer.Typer(help=__doc__, no_args_is_help=True)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
@@ -78,8 +78,12 @@ def run(
     category: list[str] = typer.Option(None, help="Only these categories"),
     id: list[str] = typer.Option(None, help="Only these golden ids"),
     approved_only: bool = typer.Option(False, help="Only goldens marked approved"),
-    judge_model: str = typer.Option(DEFAULT_JUDGE_MODEL, help="Claude model used as judge"),
-    effort: str = typer.Option("medium", help="Judge effort: low, medium, high"),
+    judge_model: str = typer.Option(
+        DEFAULT_JUDGE_MODEL, help="Claude model used as judge (default: SEC_RAG_JUDGE_MODEL)"
+    ),
+    effort: str = typer.Option(
+        DEFAULT_JUDGE_EFFORT, help="Judge effort: low, medium, high (default: SEC_RAG_JUDGE_EFFORT)"
+    ),
     reasons: bool = typer.Option(True, help="Ask the judge for a reason per score (costs more)"),
     concurrency: int = typer.Option(4, help="Test cases judged in parallel"),
     save: bool = typer.Option(True, help="Save the run for `compare`"),
