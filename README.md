@@ -45,7 +45,10 @@ sec-filings-analyst-rag/
 │   ├── api/                   # FastAPI service (queries, conversations, health)
 │   └── cli.py                 # `sec-rag download | index | ask`
 ├── app/streamlit_app.py       # Chat UI with saved conversations
-├── evaluation/                # Retrieval eval set + Hit@k / MRR script
+├── evaluation/
+│   ├── goldens/               # 40 retrieval goldens (DeepEval format, with source quotes)
+│   ├── retrieval_eval/        # DeepEval Contextual Recall / Precision with a Claude judge
+│   └── run_eval.py            # Quick free check: section + exact-term hits per mode
 ├── tests/                     # Unit tests (parser, chunker, prompts, chat)
 ├── notebooks/                 # Exploration
 └── data/
@@ -79,6 +82,26 @@ streamlit run app/streamlit_app.py      # Chat UI
 python evaluation/run_eval.py           # Compare dense / keyword / hybrid retrieval
 pytest
 ```
+
+## Retrieval evaluation (DeepEval)
+
+`pip install -e ".[eval]"` adds DeepEval. Each golden's question goes through the
+retriever only, then a Claude judge (`claude-sonnet-5-5` by default) scores the top-k
+chunks against the golden's reference answer:
+
+- **Contextual Recall**: share of the reference answer's statements supported by the
+  retrieved chunks.
+- **Contextual Precision**: whether relevant chunks are ranked above irrelevant ones.
+
+```bash
+python -m evaluation.retrieval_eval run                          # hybrid, all goldens
+python -m evaluation.retrieval_eval run --mode dense --mode hybrid --category fact
+python -m evaluation.retrieval_eval compare                      # last two runs
+```
+
+Every run calls the judge, so it costs money (roughly $0.05 per golden per mode with
+Sonnet 5.5) and scores vary slightly between runs; differences under ~0.03 are likely
+noise. Runs are saved to `evaluation/runs/retrieval/` with their settings.
 
 ## Hybrid search
 

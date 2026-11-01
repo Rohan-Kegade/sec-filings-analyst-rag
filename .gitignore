@@ -17,4 +17,5 @@ data/processed/*
 data/vectorstore/*
 data/chats.db*
 data/keyword_index.db*
+evaluation/runs/
 !data/**/.gitkeep

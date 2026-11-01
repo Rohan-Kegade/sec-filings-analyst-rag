@@ -24,6 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ui = ["streamlit>=1.38"]
+eval = ["deepeval>=4.3"]
 dev = ["pytest>=8.0", "ruff>=0.6"]
 
 [project.scripts]
