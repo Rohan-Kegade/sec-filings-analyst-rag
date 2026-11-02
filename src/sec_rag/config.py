@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     retrieval_mode: Literal["hybrid", "dense", "keyword"] = "hybrid"
     hybrid_candidates: int = 30  # results taken from each search before merging
     rrf_k: int = 60
+    # Questions naming several companies or years search each one separately, so every
+    # company/year gets its share of chunks instead of the best-matching one taking them all.
+    min_chunks_per_entity: int = 4  # e.g. 2 companies -> 8 chunks, 3 -> 12
+    max_comparison_chunks: int = 16  # cap on the total for such questions
 
     # Generation
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
