@@ -69,20 +69,55 @@ class Retriever:
         ]
 
     def _hybrid(self, question: str, k: int, filters: dict) -> list[RetrievedChunk]:
+        return self._hybrid_search(question, k, filters)[0]
+
+    def hybrid_trace(
+        self, question: str, k: int = settings.top_k, filters: dict | None = None
+    ) -> tuple[list[RetrievedChunk], list[RetrievedChunk]]:
+        """Hybrid results plus what fusion dropped, for diagnosing retrieval in evals.
+
+        Dropped: chunks that dense or keyword search alone would have returned in its top k
+        but the fused top k left out. Their `score` is 0 and `ranks` says where each search
+        put them.
+        """
+        merged = {**extract_filters(question, self.known_tickers), **(filters or {})}
+        return self._hybrid_search(question, k, merged)
+
+    def _hybrid_search(
+        self, question: str, k: int, filters: dict
+    ) -> tuple[list[RetrievedChunk], list[RetrievedChunk]]:
         candidates = max(k, settings.hybrid_candidates)
         dense = self._dense(question, candidates, filters)
         keyword_hits = self.keyword_index.search(question, k=candidates, filters=filters)
+        rankings = {
+            "dense": [rc.chunk.chunk_id for rc in dense],
+            "keyword": [chunk_id for chunk_id, _ in keyword_hits],
+        }
+        ranks: dict[str, dict[str, int]] = {}
+        for search, ids in rankings.items():
+            for rank, chunk_id in enumerate(ids, start=1):
+                ranks.setdefault(chunk_id, {})[search] = rank
 
-        fused = reciprocal_rank_fusion(
-            [[rc.chunk.chunk_id for rc in dense], [chunk_id for chunk_id, _ in keyword_hits]],
-            k=settings.rrf_k,
-        )[:k]
+        fused = reciprocal_rank_fusion(list(rankings.values()), k=settings.rrf_k)[:k]
+        kept = {chunk_id for chunk_id, _ in fused}
+        dropped = [
+            chunk_id for chunk_id, r in ranks.items()
+            if chunk_id not in kept and min(r.values()) <= k
+        ]  # fmt: skip
 
         # Dense results already carry their chunk; fetch the keyword-only ones.
         chunks = {rc.chunk.chunk_id: rc.chunk for rc in dense}
-        chunks.update(self.store.get_by_ids([cid for cid, _ in fused if cid not in chunks]))
-        return [
-            RetrievedChunk(chunk=chunks[chunk_id], score=score)
+        missing = [cid for cid in [*kept, *dropped] if cid not in chunks]
+        if missing:
+            chunks.update(self.store.get_by_ids(missing))
+        results = [
+            RetrievedChunk(chunk=chunks[chunk_id], score=score, ranks=ranks[chunk_id])
             for chunk_id, score in fused
             if chunk_id in chunks
         ]
+        dropped_chunks = [
+            RetrievedChunk(chunk=chunks[chunk_id], score=0.0, ranks=ranks[chunk_id])
+            for chunk_id in sorted(dropped, key=lambda cid: min(ranks[cid].values()))
+            if chunk_id in chunks
+        ]
+        return results, dropped_chunks

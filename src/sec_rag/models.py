@@ -45,6 +45,8 @@ class Chunk(BaseModel):
 class RetrievedChunk(BaseModel):
     chunk: Chunk
     score: float
+    # Hybrid search only: 1-based rank in each search that found it, e.g. {"dense": 2}.
+    ranks: dict[str, int] = {}
 
 
 class Answer(BaseModel):

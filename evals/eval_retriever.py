@@ -78,11 +78,19 @@ async def evaluate_mode(
     concurrency: int,
 ) -> list[dict]:
     # Retrieval is fast and local, so do it up front; only the judge calls run concurrently.
-    retrieved, latencies = [], []
+    # Hybrid also records where dense and keyword search ranked each chunk, and what fusion
+    # dropped, so the report can show why a case failed.
+    traced = getattr(retriever, "mode", None) == "hybrid"
+    retrieved, dropped, latencies = [], [], []
     for golden in goldens:
         start = time.perf_counter()
-        retrieved.append(retriever.retrieve(golden.input, k=k))
+        if traced:
+            results, left_out = retriever.hybrid_trace(golden.input, k=k)
+        else:
+            results, left_out = retriever.retrieve(golden.input, k=k), []
         latencies.append((time.perf_counter() - start) * 1000)
+        retrieved.append(results)
+        dropped.append(left_out)
 
     semaphore = asyncio.Semaphore(concurrency)
     scored = await asyncio.gather(
@@ -99,20 +107,41 @@ async def evaluate_mode(
             for golden, results in zip(goldens, retrieved)
         )
     )
-    return [
-        {
+    rows = []
+    for golden, results, left_out, latency, scores in zip(
+        goldens, retrieved, dropped, latencies, scored
+    ):
+        row = {
             "id": golden.id,
             "category": golden.category,
             "latency_ms": latency,
-            "retrieved": [
-                f"{rc.chunk.ticker} FY{rc.chunk.fiscal_year} Item {rc.chunk.item} "
-                f"({rc.chunk.chunk_id})"
-                for rc in results
-            ],
+            "retrieved": [chunk_label(rc) for rc in results],
             **scores,
         }
-        for golden, results, latency, scores in zip(goldens, retrieved, latencies, scored)
-    ]
+        if traced:
+            row["sources"] = [rc.ranks for rc in results]
+            row["dropped"] = [{"chunk": chunk_label(rc), "ranks": rc.ranks} for rc in left_out]
+        rows.append(row)
+    return rows
+
+
+def chunk_label(rc) -> str:
+    c = rc.chunk
+    return f"{c.ticker} FY{c.fiscal_year} Item {c.item} ({c.chunk_id})"
+
+
+def source_mix(rows: list[dict]) -> dict | None:
+    """For hybrid rows: how many final chunks came from both searches, dense or keyword only."""
+    traced = [r for r in rows if "sources" in r]
+    if not traced:
+        return None
+    mix = {"both": 0, "dense only": 0, "keyword only": 0}
+    for r in traced:
+        for ranks in r["sources"]:
+            key = "both" if len(ranks) == 2 else f"{next(iter(ranks), 'dense')} only"
+            mix[key] += 1
+    return mix
+
 
 
 def summarize(rows: list[dict]) -> dict:
@@ -222,6 +251,69 @@ def print_report(result: dict) -> None:
                 typer.echo(f"  {_fmt(r['recall']['score'], 2):>5}  {r['id']}: {detail[:160]}")
 
 
+def _md_cell(text) -> str:
+    """Make text safe for one Markdown table cell."""
+    return str(text).replace("|", "\\|").replace("\n", " ")
+
+
+def markdown_report(result: dict, cost: str | None = None) -> str:
+    """The run as a Markdown report: settings, summary, by category, weak cases, all cases."""
+    s, modes = result["settings"], list(result["summary"])
+    lines = [f"# Retriever eval: {result['timestamp']}", ""]
+    lines += ["| setting | value |", "|---|---|"]
+    lines += [f"| {key} | {_md_cell(value)} |" for key, value in s.items()]
+    lines += [f"| goldens | {result['goldens']['total']} |"]
+    if cost:
+        lines += [f"| cost | {_md_cell(cost)} |"]
+
+    lines += ["", "## Summary", "", "| mode | recall | precision | errors | latency ms |",
+              "|---|---|---|---|---|"]  # fmt: skip
+    for mode, m in result["summary"].items():
+        errors = m["recall_errors"] + m["precision_errors"]
+        lines.append(f"| {mode} | {_fmt(m['recall'])} | {_fmt(m['precision'])} | {errors} "
+                     f"| {_fmt(m['latency_ms'], 0)} |")  # fmt: skip
+
+    # Every mode runs the same goldens, so the case count is one column, not one per mode.
+    lines += ["", "## By category (recall / precision)", "",
+              "| category | cases | " + " | ".join(modes) + " |",
+              "|---" * (len(modes) + 2) + "|"]  # fmt: skip
+    for category, first in next(iter(result["by_category"].values()), {}).items():
+        cells = []
+        for mode in modes:
+            m = result["by_category"][mode][category]
+            cells.append(f"{_fmt(m['recall'], 2)} / {_fmt(m['precision'], 2)}")
+        lines.append(f"| {category} | {first['cases']} | " + " | ".join(cells) + " |")
+
+    for mode, rows in result["cases"].items():
+        mix = source_mix(rows)
+        if mix:
+            total = sum(mix.values()) or 1
+            lines += ["", f"## {mode}: where the final chunks came from", "",
+                      "| found by | chunks | share |", "|---|---|---|"]  # fmt: skip
+            lines += [f"| {key} | {n} | {n / total:.0%} |" for key, n in mix.items()]
+
+    # Summary only: retrieved chunks, search ranks and fusion drops stay in the run's JSON.
+    for mode, rows in result["cases"].items():
+        weak = [r for r in rows if (r["recall"]["score"] or 0) < 0.5 or r["recall"]["error"]]
+        lines += ["", f"## {mode}: cases with recall < 0.5", ""]
+        if not weak:
+            lines.append("None.")
+            continue
+        lines += ["| id | category | recall | judge's reason |", "|---|---|---|---|"]
+        for r in weak:
+            recall = "error" if r["recall"]["error"] else _fmt(r["recall"]["score"], 2)
+            detail = r["recall"]["error"] or r["recall"]["reason"] or ""
+            lines.append(f"| {r['id']} | {r['category']} | {recall} | {_md_cell(detail)} |")
+
+    for mode, rows in result["cases"].items():
+        lines += ["", f"## {mode}: all cases", "", "| id | category | recall | precision |",
+                  "|---|---|---|---|"]  # fmt: skip
+        for r in rows:
+            scores = ["error" if r[m]["error"] else _fmt(r[m]["score"], 2) for m in METRICS]
+            lines.append(f"| {r['id']} | {r['category']} | " + " | ".join(scores) + " |")
+    return "\n".join(lines) + "\n"
+
+
 @app.command("run")
 def run_command(
     mode: list[str] = typer.Option(["hybrid"], help="Retrieval modes: hybrid, dense, keyword"),
@@ -263,9 +355,12 @@ def run_command(
         judge_name=judge_model,
     )
     print_report(result)
-    typer.echo(f"\n{judge.cost_summary()}")
+    cost = judge.cost_summary()
+    typer.echo(f"\n{cost}")
     if save:
-        typer.echo(f"Saved {runs.save(result, RUN_KIND)}")
+        path = runs.save(result, RUN_KIND)
+        report = runs.save_report(markdown_report(result, cost), path)
+        typer.echo(f"Saved {path}\nReport {report}")
 
 
 @app.command()

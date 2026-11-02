@@ -26,6 +26,13 @@ def save(result: dict, kind: str) -> Path:
     return path
 
 
+def save_report(markdown: str, run_path: Path) -> Path:
+    """Write a readable Markdown report next to a saved run (same name, .md)."""
+    path = run_path.with_suffix(".md")
+    path.write_text(markdown, encoding="utf-8")
+    return path
+
+
 def list_runs(kind: str) -> list[Path]:
     return sorted((RUNS_DIR / kind).glob("*.json"))
 

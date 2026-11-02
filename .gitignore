@@ -19,3 +19,4 @@ data/chats.db*
 data/keyword_index.db*
 evals/runs/
 !data/**/.gitkeep
+temp/

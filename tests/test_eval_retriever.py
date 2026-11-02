@@ -77,7 +77,7 @@ def test_judge_returns_schema_instance_and_sends_no_temperature():
     assert request["model"] == settings.judge_model
     assert request["output_format"] is Verdict
     assert request["thinking"] == {"type": "adaptive"}
-    assert request["output_config"] == {"effort": "medium"}
+    assert request["output_config"] == {"effort": settings.judge_effort}
     assert request["betas"] == [FALLBACK_BETA] and request["fallbacks"] == "default"
     assert "temperature" not in request
 
@@ -187,3 +187,51 @@ def test_run_scores_each_golden_and_records_errors():
     rows = {r["id"]: r for r in result["cases"]["hybrid"]}
     assert rows["c"]["precision"]["error"] == "judge failed"
     assert len(rows["a"]["retrieved"]) == 3
+
+
+def test_markdown_report_and_save(tmp_path):
+    def factory():
+        return {"recall": FakeMetric(score=0.0), "precision": FakeMetric(error="judge | failed")}
+
+    result = eval_retriever.run({"hybrid": FakeRetriever()}, GOLDENS, k=2, metric_factory=factory,
+                                concurrency=2, judge_name="claude-haiku-5-5")  # fmt: skip
+    report = eval_retriever.markdown_report(result, cost="judge tokens: 1 in / 1 out (~$0.00)")
+
+    assert report.startswith("# Retriever eval: ")
+    assert "| judge | claude-haiku-5-5 |" in report
+    assert "| cost | judge tokens: 1 in / 1 out (~$0.00) |" in report
+    assert "| hybrid | 0.000 | - | 3 |" in report  # recall 0, precision all errors
+    assert "## hybrid: cases with recall < 0.5" in report
+    assert "| a | fact | 0.00 | because |" in report
+    assert "| c | comparison | 0.00 | error |" in report
+
+    assert "where the final chunks came from" not in report  # no hybrid trace here
+
+    path = eval_retriever.runs.save_report(report, tmp_path / "2026-01-01T00-00-00.json")
+    assert path.name == "2026-01-01T00-00-00.md"
+    assert path.read_text(encoding="utf-8") == report
+
+
+class TracedRetriever(FakeRetriever):
+    mode = "hybrid"
+
+    def hybrid_trace(self, question, k):
+        results = self.retrieve(question, k)
+        results[0].ranks, results[1].ranks = {"dense": 1, "keyword": 3}, {"keyword": 1}
+        dropped = RetrievedChunk(chunk=make_chunk("x9", "dropped"), score=0.0, ranks={"dense": 2})
+        return results, [dropped]
+
+
+def test_hybrid_rows_and_report_show_sources_and_drops():
+    def factory():
+        return {"recall": FakeMetric(score=0.0), "precision": FakeMetric(score=0.5)}
+
+    result = eval_retriever.run({"hybrid": TracedRetriever()}, GOLDENS[:1], k=2,
+                                metric_factory=factory, concurrency=1, judge_name="j")  # fmt: skip
+    row = result["cases"]["hybrid"][0]
+    assert row["sources"] == [{"dense": 1, "keyword": 3}, {"keyword": 1}]
+    assert row["dropped"][0]["ranks"] == {"dense": 2}
+
+    report = eval_retriever.markdown_report(result)
+    assert "| both | 1 | 50% |" in report and "| keyword only | 1 | 50% |" in report
+    assert "(c0)" not in report and "x9" not in report  # chunks stay in the JSON only

@@ -76,3 +76,16 @@ def test_filters_reach_both_searches():
     retriever = make_retriever("hybrid")
     retriever.retrieve("What does MSFT say in 2024?", k=4, filters={"item": "7"})
     assert retriever.keyword_index.calls == [{"ticker": "MSFT", "fiscal_year": 2024, "item": "7"}]
+
+
+def test_hybrid_records_ranks_and_what_fusion_dropped():
+    retriever = make_retriever("hybrid")
+    results, dropped = retriever.hybrid_trace("q", k=2)
+    # dense: d1, both, d2   keyword: k1, both   -> "both" wins, then d1 (ties keep dense first)
+    assert [(rc.chunk.chunk_id, rc.ranks) for rc in results] == [
+        ("both", {"dense": 2, "keyword": 2}),
+        ("d1", {"dense": 1}),
+    ]
+    # k1 was keyword's #1 (inside the top 2) but fusion left it out; d2 was never in a top 2.
+    assert [(rc.chunk.chunk_id, rc.ranks) for rc in dropped] == [("k1", {"keyword": 1})]
+    assert [rc.chunk.chunk_id for rc in retriever.retrieve("q", k=2)] == ["both", "d1"]
