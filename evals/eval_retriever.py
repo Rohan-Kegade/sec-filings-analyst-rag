@@ -76,7 +76,9 @@ async def evaluate_mode(
     k: int,
     metric_factory: Callable[[], dict],
     concurrency: int,
+    on_judged: Callable[[int, int], None] | None = None,
 ) -> list[dict]:
+    """on_judged(done, total) is called each time a case finishes judging."""
     # Retrieval is fast and local, so do it up front; only the judge calls run concurrently.
     # Hybrid also records where dense and keyword search ranked each chunk, and what fusion
     # dropped, so the report can show why a case failed.
@@ -93,19 +95,28 @@ async def evaluate_mode(
         dropped.append(left_out)
 
     semaphore = asyncio.Semaphore(concurrency)
-    scored = await asyncio.gather(
-        *(
-            score_case(
-                LLMTestCase(
-                    input=golden.input,
-                    expected_output=golden.expected_output,
-                    retrieval_context=[rc.chunk.text for rc in results],
-                ),
-                metric_factory(),
-                semaphore,
-            )
-            for golden, results in zip(goldens, retrieved)
+    done = 0
+    if on_judged:
+        on_judged(0, len(goldens))
+
+    async def judge(golden: Golden, results: list) -> dict:
+        nonlocal done
+        scores = await score_case(
+            LLMTestCase(
+                input=golden.input,
+                expected_output=golden.expected_output,
+                retrieval_context=[rc.chunk.text for rc in results],
+            ),
+            metric_factory(),
+            semaphore,
         )
+        done += 1
+        if on_judged:
+            on_judged(done, len(goldens))
+        return scores
+
+    scored = await asyncio.gather(
+        *(judge(golden, results) for golden, results in zip(goldens, retrieved))
     )
     rows = []
     for golden, results, left_out, latency, scores in zip(
@@ -173,13 +184,19 @@ def run(
     metric_factory: Callable[[], dict],
     concurrency: int,
     judge_name: str,
+    progress: Callable[[str, int, int], None] | None = None,
 ) -> dict:
+    """progress(mode, done, total) is called as each mode's cases finish judging."""
+
     async def run_all() -> dict[str, list[dict]]:
         # One event loop for every mode: the async Claude client's connections belong to it.
-        return {
-            mode: await evaluate_mode(retriever, goldens, k, metric_factory, concurrency)
-            for mode, retriever in retrievers.items()
-        }
+        results = {}
+        for mode, retriever in retrievers.items():
+            on_judged = (lambda done, total, m=mode: progress(m, done, total)) if progress else None
+            results[mode] = await evaluate_mode(
+                retriever, goldens, k, metric_factory, concurrency, on_judged
+            )
+        return results
 
     results = asyncio.run(run_all())
     categories = sorted({g.category for g in goldens})
@@ -360,14 +377,30 @@ def run_command(
         raise typer.Exit("No goldens match the filters.")
 
     judge = ClaudeJudge(judge_model, effort=effort)
+    typer.echo(f"{len(goldens)} questions x {len(mode)} mode(s): {', '.join(mode)} | "
+               f"judge {judge_model} ({effort}) | k={k}", err=True)  # fmt: skip
+    typer.echo("Loading retrievers...", err=True)
+    retrievers = _retrievers(mode)
+    started = time.perf_counter()
+
+    def progress(mode_name: str, done: int, total: int) -> None:
+        # One line per mode, rewritten in place; a newline once the mode is finished.
+        elapsed = time.perf_counter() - started
+        end = "\n" if done == total else ""
+        typer.echo(f"\r  {mode_name:>8}: {done}/{total} judged  ({elapsed:.0f}s)",
+                   nl=False, err=True)  # fmt: skip
+        typer.echo(end, nl=False, err=True)
+
     result = run(
-        _retrievers(mode),
+        retrievers,
         goldens,
         k,
         metric_factory=lambda: deepeval_metrics(judge, include_reason=reasons),
         concurrency=concurrency,
         judge_name=judge_model,
+        progress=progress,
     )
+    typer.echo("", err=True)
     print_report(result)
     cost = judge.cost_summary()
     typer.echo(f"\n{cost}")

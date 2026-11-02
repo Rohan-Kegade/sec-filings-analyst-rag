@@ -189,6 +189,18 @@ def test_run_scores_each_golden_and_records_errors():
     assert len(rows["a"]["retrieved"]) == 3
 
 
+def test_run_reports_progress_per_mode():
+    calls = []
+
+    def factory():
+        return {"recall": FakeMetric(score=1.0), "precision": FakeMetric(score=1.0)}
+
+    eval_retriever.run({"dense": FakeRetriever(), "hybrid": FakeRetriever()}, GOLDENS, k=2,
+                       metric_factory=factory, concurrency=2, judge_name="j",
+                       progress=lambda mode, done, total: calls.append((mode, done, total)))  # fmt: skip
+    assert calls == [("dense", n, 3) for n in range(4)] + [("hybrid", n, 3) for n in range(4)]
+
+
 def test_markdown_report_and_save(tmp_path):
     def factory():
         return {"recall": FakeMetric(score=0.0), "precision": FakeMetric(error="judge | failed")}
