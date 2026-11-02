@@ -130,18 +130,30 @@ def chunk_label(rc) -> str:
     return f"{c.ticker} FY{c.fiscal_year} Item {c.item} ({c.chunk_id})"
 
 
-def source_mix(rows: list[dict]) -> dict | None:
-    """For hybrid rows: how many final chunks came from both searches, dense or keyword only."""
+def source_mix(rows: list[dict], k: int) -> dict | None:
+    """For hybrid rows: would each search alone (its own top k) have returned the final chunks?
+
+    "neither" counts chunks that fusion promoted from deeper in both candidate lists, in
+    place of a strong hit from one search.
+    """
     traced = [r for r in rows if "sources" in r]
     if not traced:
         return None
-    mix = {"both": 0, "dense only": 0, "keyword only": 0}
+    mix = {f"both top {k}s": 0, f"dense top {k} only": 0, f"keyword top {k} only": 0,
+           f"neither top {k}": 0}  # fmt: skip
     for r in traced:
         for ranks in r["sources"]:
-            key = "both" if len(ranks) == 2 else f"{next(iter(ranks), 'dense')} only"
-            mix[key] += 1
+            dense = ranks.get("dense", k + 1) <= k
+            keyword = ranks.get("keyword", k + 1) <= k
+            if dense and keyword:
+                mix[f"both top {k}s"] += 1
+            elif dense:
+                mix[f"dense top {k} only"] += 1
+            elif keyword:
+                mix[f"keyword top {k} only"] += 1
+            else:
+                mix[f"neither top {k}"] += 1
     return mix
-
 
 
 def summarize(rows: list[dict]) -> dict:
@@ -285,10 +297,12 @@ def markdown_report(result: dict, cost: str | None = None) -> str:
         lines.append(f"| {category} | {first['cases']} | " + " | ".join(cells) + " |")
 
     for mode, rows in result["cases"].items():
-        mix = source_mix(rows)
+        mix = source_mix(rows, s["k"])
         if mix:
             total = sum(mix.values()) or 1
             lines += ["", f"## {mode}: where the final chunks came from", "",
+                      (f"Would each search alone (its own top {s['k']}) have returned the "
+                       "chunk? \"neither\" = fusion promoted it from deeper in both lists."), "",
                       "| found by | chunks | share |", "|---|---|---|"]  # fmt: skip
             lines += [f"| {key} | {n} | {n / total:.0%} |" for key, n in mix.items()]
 

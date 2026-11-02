@@ -233,5 +233,18 @@ def test_hybrid_rows_and_report_show_sources_and_drops():
     assert row["dropped"][0]["ranks"] == {"dense": 2}
 
     report = eval_retriever.markdown_report(result)
-    assert "| both | 1 | 50% |" in report and "| keyword only | 1 | 50% |" in report
+    # k=2: c0 is dense #1 but keyword #3 (outside keyword's top 2); c1 is keyword #1.
+    assert "| dense top 2 only | 1 | 50% |" in report
+    assert "| keyword top 2 only | 1 | 50% |" in report
+    assert "| both top 2s | 0 | 0% |" in report and "| neither top 2 | 0 | 0% |" in report
     assert "(c0)" not in report and "x9" not in report  # chunks stay in the JSON only
+
+
+def test_source_mix_counts_against_each_search_top_k():
+    rows = [{"sources": [{"dense": 1, "keyword": 2}, {"dense": 3}, {"keyword": 9},
+                         {"dense": 14, "keyword": 20}]}]  # fmt: skip
+    assert eval_retriever.source_mix(rows, k=8) == {
+        "both top 8s": 1, "dense top 8 only": 1, "keyword top 8 only": 0, "neither top 8": 2,
+    }  # fmt: skip
+    assert eval_retriever.source_mix([{"id": "no trace"}], k=8) is None
+
