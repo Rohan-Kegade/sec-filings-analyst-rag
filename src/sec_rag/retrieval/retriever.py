@@ -10,6 +10,7 @@ from sec_rag.indexing.vector_store import VectorStore
 from sec_rag.models import RetrievedChunk
 from sec_rag.retrieval.fusion import reciprocal_rank_fusion
 from sec_rag.retrieval.query_parser import extract_filters
+from sec_rag.retrieval.reranker import Reranker
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +22,16 @@ class Retriever:
         store: VectorStore | None = None,
         keyword_index: KeywordIndex | None = None,
         mode: str = settings.retrieval_mode,
+        reranker: Reranker | None = None,
+        rerank: bool = settings.rerank,
     ):
         self.embedder = embedder or Embedder()
         self.store = store or VectorStore()
         self.keyword_index = keyword_index or KeywordIndex()
         self.mode = mode
+        # Hybrid mode only: dense and keyword stay plain single-search baselines.
+        self.rerank = rerank and mode == "hybrid"
+        self.reranker = reranker or Reranker()  # creates its API client on first use
         self._known_tickers: set[str] | None = None
 
     @property
@@ -38,6 +44,8 @@ class Retriever:
         """Load the embedding model and ticker list now instead of on the first query."""
         self.embedder.embed_query("warm up")
         _ = self.known_tickers
+        if self.rerank:
+            self.reranker.warm_up()
         if self.mode != "dense" and self.keyword_index.count() == 0:
             logger.warning(
                 "Keyword index is empty, so %s search will use dense results only. "
@@ -119,18 +127,30 @@ class Retriever:
             for rank, chunk_id in enumerate(ids, start=1):
                 ranks.setdefault(chunk_id, {})[search] = rank
 
-        fused = reciprocal_rank_fusion(list(rankings.values()), k=settings.rrf_k)[:k]
+        fused = reciprocal_rank_fusion(list(rankings.values()), k=settings.rrf_k)
+        # Dense results already carry their chunk; keyword-only ones are fetched as needed.
+        chunks = {rc.chunk.chunk_id: rc.chunk for rc in dense}
+        if self.rerank:
+            pool = fused[: max(k, settings.rerank_candidates)]
+            self._fetch(chunks, [chunk_id for chunk_id, _ in pool])
+            pool = [(chunk_id, _) for chunk_id, _ in pool if chunk_id in chunks]
+            for position, (chunk_id, _) in enumerate(pool, start=1):
+                ranks[chunk_id]["fused"] = position  # where RRF had it before reranking
+            try:
+                scores = self.reranker.score(question, [chunks[cid] for cid, _ in pool])
+            except Exception as exc:  # noqa: BLE001 - a reranker failure must not break retrieval
+                logger.warning("Reranking failed, keeping the fused order: %s", exc)
+            else:
+                pairs = zip((chunk_id for chunk_id, _ in pool), scores, strict=True)
+                fused = sorted(pairs, key=lambda pair: pair[1], reverse=True)  # stable on ties
+        fused = fused[:k]
         kept = {chunk_id for chunk_id, _ in fused}
         dropped = [
             chunk_id for chunk_id, r in ranks.items()
-            if chunk_id not in kept and min(r.values()) <= k
+            if chunk_id not in kept and min(r[s] for s in rankings if s in r) <= k
         ]  # fmt: skip
 
-        # Dense results already carry their chunk; fetch the keyword-only ones.
-        chunks = {rc.chunk.chunk_id: rc.chunk for rc in dense}
-        missing = [cid for cid in [*kept, *dropped] if cid not in chunks]
-        if missing:
-            chunks.update(self.store.get_by_ids(missing))
+        self._fetch(chunks, [*kept, *dropped])
         results = [
             RetrievedChunk(chunk=chunks[chunk_id], score=score, ranks=ranks[chunk_id])
             for chunk_id, score in fused
@@ -142,6 +162,12 @@ class Retriever:
             if chunk_id in chunks
         ]
         return results, dropped_chunks
+
+    def _fetch(self, chunks: dict, chunk_ids: list[str]) -> None:
+        """Add the chunks not already in `chunks` (keyword-only hits) from the store."""
+        missing = [chunk_id for chunk_id in chunk_ids if chunk_id not in chunks]
+        if missing:
+            chunks.update(self.store.get_by_ids(missing))
 
 
 def split_by_entity(filters: dict) -> list[dict]:

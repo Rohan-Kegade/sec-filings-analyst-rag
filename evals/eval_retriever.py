@@ -24,7 +24,7 @@ from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 
 from evals import GOLDENS_DIR, runs
-from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL, score_case
+from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL, PRICES, score_case
 from evals.runs import git_commit
 from sec_rag.config import settings
 from sec_rag.retrieval.retriever import Retriever
@@ -210,6 +210,7 @@ def run(
             "embedding_model": settings.embedding_model,
             "hybrid_candidates": settings.hybrid_candidates,
             "rrf_k": settings.rrf_k,
+            "rerank": rerank_label(),
             "git_commit": git_commit(),
         },
         "goldens": {"total": len(goldens)},
@@ -233,6 +234,26 @@ NOISE = 0.03
 
 def _fmt(value, digits: int = 3) -> str:
     return "-" if value is None else f"{value:.{digits}f}"
+
+
+def rerank_label() -> str:
+    """What reranked the hybrid results, for the run's settings ("off" when nothing did)."""
+    if not settings.rerank:
+        return "off"
+    return f"{settings.rerank_model} ({settings.rerank_effort}), top {settings.rerank_candidates}"
+
+
+def rerank_cost(retrievers: dict) -> str | None:
+    """Token use of the reranker during the run, priced like the judge."""
+    reranker = next((r.reranker for r in retrievers.values() if r.rerank), None)
+    if reranker is None:
+        return None
+    summary = f"reranker tokens: {reranker.input_tokens:,} in / {reranker.output_tokens:,} out"
+    if reranker.model in PRICES:
+        price_in, price_out = PRICES[reranker.model]
+        dollars = reranker.input_tokens / 1e6 * price_in + reranker.output_tokens / 1e6 * price_out
+        summary += f" (~${dollars:.2f})"
+    return summary
 
 
 def _retrievers(modes: list[str]) -> dict:
@@ -402,7 +423,7 @@ def run_command(
     )
     typer.echo("", err=True)
     print_report(result)
-    cost = judge.cost_summary()
+    cost = "; ".join(c for c in [judge.cost_summary(), rerank_cost(retrievers)] if c)
     typer.echo(f"\n{cost}")
     if save:
         path = runs.save(result, RUN_KIND)

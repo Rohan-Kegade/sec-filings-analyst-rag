@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     # company/year gets its share of chunks instead of the best-matching one taking them all.
     min_chunks_per_entity: int = 4  # e.g. 2 companies -> 8 chunks, 3 -> 12
     max_comparison_chunks: int = 16  # cap on the total for such questions
+    # Reranking (hybrid mode): Claude rescores the top fused candidates and the best k are
+    # kept. Slower (it reads question + chunk together) but ranks more precisely.
+    rerank: bool = False
+    rerank_model: str = "claude-haiku-5-5"
+    rerank_effort: str = "low"
+    rerank_candidates: int = 20  # fused candidates rescored per search
 
     # Generation
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")

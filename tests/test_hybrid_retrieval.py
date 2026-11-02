@@ -1,6 +1,11 @@
+from types import SimpleNamespace
+
+import pytest
+
 from sec_rag.config import settings
 from sec_rag.models import RetrievedChunk
 from sec_rag.retrieval.fusion import reciprocal_rank_fusion
+from sec_rag.retrieval.reranker import PassageScore, Reranker, RerankScores, passage
 from sec_rag.retrieval.retriever import (
     Retriever,
     chunks_per_entity,
@@ -54,7 +59,7 @@ class FakeKeywordIndex:
 
 
 def make_retriever(mode):
-    return Retriever(FakeEmbedder(), FakeStore(), FakeKeywordIndex(), mode=mode)
+    return Retriever(FakeEmbedder(), FakeStore(), FakeKeywordIndex(), mode=mode, rerank=False)
 
 
 def test_dense_mode_skips_keyword_search():
@@ -98,6 +103,7 @@ def test_hybrid_records_ranks_and_what_fusion_dropped():
 
 
 # --- comparisons: one search per company / year -----------------------------------------
+
 
 def test_split_by_entity():
     assert split_by_entity({"ticker": "MSFT", "fiscal_year": 2024}) == [
@@ -166,7 +172,7 @@ class EmptyKeywordIndex(FakeKeywordIndex):
 def test_comparison_searches_each_company_and_interleaves(monkeypatch):
     monkeypatch.setattr(settings, "min_chunks_per_entity", 4)
     store = EntityStore()
-    retriever = Retriever(FakeEmbedder(), store, EmptyKeywordIndex(), mode="hybrid")
+    retriever = Retriever(FakeEmbedder(), store, EmptyKeywordIndex(), mode="hybrid", rerank=False)
 
     results = retriever.retrieve("Compare AAPL and MSFT cybersecurity in 2025", k=8)
 
@@ -181,6 +187,124 @@ def test_comparison_searches_each_company_and_interleaves(monkeypatch):
 
 def test_single_company_question_is_not_split():
     store = EntityStore()
-    retriever = Retriever(FakeEmbedder(), store, EmptyKeywordIndex(), mode="dense")
+    retriever = Retriever(FakeEmbedder(), store, EmptyKeywordIndex(), mode="dense", rerank=False)
     assert len(retriever.retrieve("What does AAPL say about risk in 2025?", k=8)) == 8
     assert store.filters == [{"ticker": "AAPL", "fiscal_year": 2025}]
+
+
+# --- reranking -----------------------------------------------------------------------------
+
+
+class FakeReranker:
+    """Scores by a fixed table; records what it was asked to score."""
+
+    def __init__(self, scores):
+        self.scores, self.seen = scores, []
+
+    def score(self, question, chunks):
+        self.seen.append([c.chunk_id for c in chunks])
+        return [self.scores[c.chunk_id] for c in chunks]
+
+
+def make_reranked(scores, rerank=True, mode="hybrid"):
+    reranker = FakeReranker(scores)
+    retriever = Retriever(FakeEmbedder(), FakeStore(), FakeKeywordIndex(), mode=mode,
+                          reranker=reranker, rerank=rerank)  # fmt: skip
+    return retriever, reranker
+
+
+def test_rerank_reorders_fused_candidates_and_records_fused_rank():
+    retriever, reranker = make_reranked({"d1": 0.1, "both": 0.2, "d2": 3.0, "k1": 1.0})
+    results, dropped = retriever.hybrid_trace("q", k=2)
+    assert [rc.chunk.chunk_id for rc in results] == ["d2", "k1"]
+    assert results[0].score == 3.0  # the reranker's score replaces the RRF score
+    assert set(reranker.seen[0]) == {"d1", "both", "d2", "k1"}  # k1 fetched before scoring
+    assert results[0].ranks["fused"] == 4 and results[0].ranks["dense"] == 3
+    # Dropped still means "in dense's or keyword's own top k, but not kept".
+    assert {rc.chunk.chunk_id for rc in dropped} == {"d1", "both"}
+
+
+def test_rerank_scores_only_the_top_candidates(monkeypatch):
+    monkeypatch.setattr(settings, "rerank_candidates", 2)
+    retriever, reranker = make_reranked({"d1": 0.0, "both": 1.0, "d2": 9.0, "k1": 9.0})
+    retriever.retrieve("q", k=2)
+    assert len(reranker.seen[0]) == 2  # never more than max(k, rerank_candidates)
+
+
+def test_rerank_off_and_non_hybrid_modes_skip_the_reranker():
+    for rerank, mode in [(False, "hybrid"), (True, "dense"), (True, "keyword")]:
+        retriever, reranker = make_reranked({}, rerank=rerank, mode=mode)
+        retriever.retrieve("q", k=2)
+        assert reranker.seen == []
+
+
+def test_rerank_runs_per_company_for_comparisons(monkeypatch):
+    monkeypatch.setattr(settings, "min_chunks_per_entity", 1)
+    monkeypatch.setattr(settings, "max_comparison_chunks", 16)
+    reranker = FakeReranker({})
+    reranker.score = lambda q, chunks: (reranker.seen.append([c.ticker for c in chunks])
+                                        or [0.0] * len(chunks))  # fmt: skip
+    retriever = Retriever(FakeEmbedder(), EntityStore(), EmptyKeywordIndex(), mode="hybrid",
+                          reranker=reranker, rerank=True)  # fmt: skip
+    retriever.retrieve("Compare AAPL and MSFT", k=2)
+    assert [set(tickers) for tickers in reranker.seen] == [{"AAPL"}, {"MSFT"}]
+
+
+def test_reranker_passage_adds_company_year_and_section():
+    chunk = make_chunk("c1", "About 164,000 employees.")
+    text = passage(chunk)
+    assert chunk.ticker in text and f"FY{chunk.fiscal_year}" in text
+    assert f"Item {chunk.item}" in text and text.endswith("About 164,000 employees.")
+
+
+class FakeParse:
+    def __init__(self, message):
+        self.message, self.calls = message, []
+
+    def parse(self, **kwargs):
+        self.calls.append(kwargs)
+        return self.message
+
+
+def claude_reranker(parsed, stop_reason="end_turn"):
+    message = SimpleNamespace(parsed_output=parsed, stop_reason=stop_reason,
+                              usage=SimpleNamespace(input_tokens=900, output_tokens=40))  # fmt: skip
+    api = FakeParse(message)
+    client = SimpleNamespace(beta=SimpleNamespace(messages=api))
+    return Reranker(client=client, model="claude-haiku-5-5", effort="low"), api
+
+
+def test_claude_reranker_scores_numbered_passages():
+    parsed = RerankScores(scores=[PassageScore(id=2, score=9), PassageScore(id=1, score=3)])
+    reranker, api = claude_reranker(parsed)
+    chunks = [make_chunk("a", "net sales"), make_chunk("b", "164,000 employees"),
+              make_chunk("c", "skipped")]  # fmt: skip
+
+    assert reranker.score("How many employees?", chunks) == [3.0, 9.0, -1.0]
+    request = api.calls[0]
+    assert request["model"] == "claude-haiku-5-5"
+    assert request["output_config"] == {"effort": "low"}
+    assert request["output_format"] is RerankScores
+    prompt = request["messages"][0]["content"]
+    assert '<passage id="2">' in prompt and "164,000 employees" in prompt
+    assert prompt.rstrip().endswith("Score passages 1-3.")
+    assert (reranker.input_tokens, reranker.output_tokens) == (900, 40)
+    assert reranker.score("q", []) == [] and len(api.calls) == 1  # nothing to score, no call
+
+
+def test_claude_reranker_raises_without_scores():
+    reranker, _ = claude_reranker(None, stop_reason="refusal")
+    with pytest.raises(RuntimeError, match="refusal"):
+        reranker.score("q", [make_chunk("a", "x")])
+
+
+def test_failed_rerank_keeps_the_fused_order():
+    class Broken:
+        def score(self, question, chunks):
+            raise RuntimeError("API down")
+
+    plain = make_retriever("hybrid").retrieve("q", k=3)
+    retriever = Retriever(FakeEmbedder(), FakeStore(), FakeKeywordIndex(), mode="hybrid",
+                          reranker=Broken(), rerank=True)  # fmt: skip
+    reranked = retriever.retrieve("q", k=3)
+    assert [rc.chunk.chunk_id for rc in reranked] == [rc.chunk.chunk_id for rc in plain]
