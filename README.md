@@ -29,7 +29,7 @@ sec-filings-analyst-rag/
 │   │   ├── embedder.py        # Voyage AI embeddings (voyage-finance-2, via API)
 │   │   ├── vector_store.py    # ChromaDB persistent store with metadata filters
 │   │   ├── keyword_index.py   # SQLite FTS5 keyword index (BM25) with the same filters
-│   │   └── pipeline.py        # Offline job: raw -> processed -> chunks -> vectors + keywords
+│   │   └── pipeline.py        # Offline jobs: parse (raw -> processed), index (-> chunks -> vectors + keywords)
 │   ├── retrieval/
 │   │   ├── query_parser.py    # Pull tickers / fiscal years out of the question
 │   │   ├── fusion.py          # Reciprocal Rank Fusion of ranked result lists
@@ -43,7 +43,7 @@ sec-filings-analyst-rag/
 │   │   └── service.py         # ChatService: load history, answer, save the exchange
 │   ├── pipeline.py            # RAGPipeline: rewrite + retrieve + generate
 │   ├── api/                   # FastAPI service (queries, conversations, health)
-│   └── cli.py                 # `sec-rag download | index | ask`
+│   └── cli.py                 # `sec-rag download | parse | index | ask`
 ├── app/streamlit_app.py       # Chat UI with saved conversations
 ├── goldens/                   # Eval goldens: retrieval, generator, application, scope
 ├── evals/                     # One file per eval (levels: see Evaluation below)
@@ -77,9 +77,12 @@ copy .env.example .env          # then fill in ANTHROPIC_API_KEY, VOYAGE_API_KEY
 
 ## Usage
 
+What each command does, step by step: [docs/commands.md](docs/commands.md).
+
 ```bash
 sec-rag download AAPL MSFT NVDA --years 3
-sec-rag index
+sec-rag parse      # raw HTML -> sections per Item (data/processed); local, free
+sec-rag index      # chunk + embed (Voyage API) + keyword index
 sec-rag ask "What supply chain risks does Apple describe in FY2024?"
 
 uvicorn sec_rag.api.main:app --reload   # API at http://localhost:8000/docs
@@ -250,8 +253,9 @@ the top. Keyword search catches exact terms that meaning-based search can miss, 
 product names and codes ("CUDA", "H100", "Vision Pro").
 
 - `SEC_RAG_RETRIEVAL_MODE`: `hybrid` (default), `dense` or `keyword`
-- `sec-rag index` fills both indexes. For chunks indexed before hybrid search existed, run
-  `sec-rag index --keyword-only` to build the keyword index without re-embedding.
+- `sec-rag index` fills both indexes from the parsed filings. For chunks indexed before
+  hybrid search existed, run `sec-rag index --keyword-only` to build the keyword index
+  without re-embedding.
 - Source scores are merged rank scores (small numbers like 0.03), not percentages.
 
 ## Chats

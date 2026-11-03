@@ -1,4 +1,4 @@
-"""Command-line entry point: `sec-rag download | index | ask`."""
+"""Command-line entry point: `sec-rag download | parse | index | ask`."""
 
 import logging
 
@@ -21,18 +21,39 @@ def download(tickers: list[str], years: int = typer.Option(3, help="Most recent 
 
 
 @app.command()
+def parse():
+    """Parse downloaded filings into sections (data/raw -> data/processed)."""
+    from sec_rag.indexing.pipeline import parse_filings
+
+    typer.echo(f"Parsed {parse_filings()} filings")
+
+
+@app.command()
 def index(
     keyword_only: bool = typer.Option(
         False, help="Only rebuild the keyword index from chunks already in the vector store"
     ),
 ):
-    """Parse, chunk, embed and index all downloaded filings."""
-    from sec_rag.indexing.pipeline import index_filings, rebuild_keyword_index
+    """Chunk, embed and index the parsed filings (run `sec-rag parse` first)."""
+    from sec_rag.indexing.pipeline import (
+        NoParsedFilingsError,
+        index_filings,
+        rebuild_keyword_index,
+        unparsed_filings,
+    )
 
     if keyword_only:
         typer.echo(f"Keyword-indexed {rebuild_keyword_index()} chunks")
-    else:
+        return
+    unparsed = unparsed_filings()
+    if unparsed:
+        names = ", ".join(f"{m.ticker} FY{m.fiscal_year}" for m in unparsed)
+        typer.echo(f"Not parsed yet, skipping: {names}. Run `sec-rag parse` to include them.")
+    try:
         typer.echo(f"Indexed {index_filings()} chunks")
+    except NoParsedFilingsError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(1) from error
 
 
 @app.command()
