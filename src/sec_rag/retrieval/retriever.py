@@ -41,7 +41,7 @@ class Retriever:
         return self._known_tickers
 
     def warm_up(self) -> None:
-        """Load the embedding model and ticker list now instead of on the first query."""
+        """Check the embedding API and load the ticker list now instead of on the first query."""
         self.embedder.embed_query("warm up")
         _ = self.known_tickers
         if self.rerank:

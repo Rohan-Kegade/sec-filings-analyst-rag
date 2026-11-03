@@ -265,7 +265,7 @@ def _retrievers(modes: list[str]) -> dict:
 
     shared = {"embedder": Embedder(), "store": VectorStore(), "keyword_index": KeywordIndex()}
     retrievers = {mode: Retriever(**shared, mode=mode) for mode in modes}
-    next(iter(retrievers.values())).warm_up()  # load the model before latency is measured
+    next(iter(retrievers.values())).warm_up()  # do the first API call before latency is measured
     return retrievers
 
 

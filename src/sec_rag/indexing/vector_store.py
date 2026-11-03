@@ -11,12 +11,40 @@ UPSERT_BATCH_SIZE = 1000
 
 
 class VectorStore:
-    def __init__(self, path=settings.vectorstore_dir, collection_name=settings.collection_name):
+    def __init__(
+        self,
+        path=settings.vectorstore_dir,
+        collection_name=settings.collection_name,
+        embedding_model: str = settings.embedding_model,
+    ):
         path.mkdir(parents=True, exist_ok=True)
         self.client = chromadb.PersistentClient(path=str(path))
-        self.collection = self.client.get_or_create_collection(
-            name=collection_name, metadata={"hnsw:space": "cosine"}
+        self.collection_name = collection_name
+        self.embedding_model = embedding_model
+        self.collection = self._open_collection()
+
+    def _open_collection(self):
+        # The model is recorded only when the collection is created; an existing
+        # collection keeps the metadata it was created with.
+        return self.client.get_or_create_collection(
+            name=self.collection_name,
+            metadata={"hnsw:space": "cosine", "embedding_model": self.embedding_model},
         )
+
+    @property
+    def built_with(self) -> str | None:
+        """The embedding model the stored vectors came from (None for older indexes)."""
+        return (self.collection.metadata or {}).get("embedding_model")
+
+    @property
+    def is_stale(self) -> bool:
+        """True if the stored vectors came from a different model than the current one."""
+        return self.built_with != self.embedding_model and self.count() > 0
+
+    def reset(self) -> None:
+        """Drop every stored chunk and start an empty collection for the current model."""
+        self.client.delete_collection(self.collection_name)
+        self.collection = self._open_collection()
 
     def upsert(self, chunks: list[Chunk], embeddings: list[list[float]]) -> None:
         for start in range(0, len(chunks), UPSERT_BATCH_SIZE):
@@ -31,6 +59,12 @@ class VectorStore:
     def query(
         self, embedding: list[float], k: int, filters: dict | None = None
     ) -> list[RetrievedChunk]:
+        if self.is_stale:
+            raise RuntimeError(
+                f"The vector store was built with {self.built_with or 'an older embedding model'}"
+                f", but the configured model is {self.embedding_model}. "
+                "Run `sec-rag index` to re-embed the filings."
+            )
         result = self.collection.query(
             query_embeddings=[embedding], n_results=k, where=_build_where(filters)
         )

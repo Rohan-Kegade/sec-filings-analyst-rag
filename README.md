@@ -26,7 +26,7 @@ sec-filings-analyst-rag/
 │   │   ├── parser.py          # HTML -> clean text -> Item sections (1, 1A, 7, 7A, 8, ...)
 │   │   └── chunker.py         # Section-aware chunking with a contextual header per chunk
 │   ├── indexing/
-│   │   ├── embedder.py        # sentence-transformers embeddings (local, free)
+│   │   ├── embedder.py        # Voyage AI embeddings (voyage-finance-2, via API)
 │   │   ├── vector_store.py    # ChromaDB persistent store with metadata filters
 │   │   ├── keyword_index.py   # SQLite FTS5 keyword index (BM25) with the same filters
 │   │   └── pipeline.py        # Offline job: raw -> processed -> chunks -> vectors + keywords
@@ -72,7 +72,7 @@ Use Python 3.11–3.13 (PyTorch and ChromaDB wheels may lag behind the newest Py
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (source .venv/bin/activate on macOS/Linux)
 pip install -e ".[ui,dev]"
-copy .env.example .env          # then fill in ANTHROPIC_API_KEY and your EDGAR user agent
+copy .env.example .env          # then fill in ANTHROPIC_API_KEY, VOYAGE_API_KEY and your EDGAR user agent
 ```
 
 ## Usage

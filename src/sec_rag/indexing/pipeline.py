@@ -22,6 +22,14 @@ def index_filings(
     store = store or VectorStore()
     keyword_index = keyword_index or KeywordIndex()
     settings.processed_dir.mkdir(parents=True, exist_ok=True)
+    if store.built_with != store.embedding_model:
+        # Vectors from different models can't share a collection (they don't even have
+        # the same length), and every filing is re-embedded below anyway.
+        logger.warning(
+            "Vector store was built with %s; rebuilding it with %s",
+            store.built_with or "an older embedding model", store.embedding_model,
+        )
+        store.reset()
 
     total = 0
     for metadata, html_path in load_raw_filings():
