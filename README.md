@@ -182,7 +182,14 @@ python -m evals.eval_rag_pipeline compare
 Context relevance counts every statement in the excerpts, and 10-K chunks are long and only
 partly on-topic, so its scores run low; compare it between runs rather than reading it as an
 absolute grade. About $0.11 per question with the Sonnet judge (context relevance reads every
-excerpt). The judge caps itself at 4 concurrent requests and retries rate limits.
+excerpt), roughly a tenth of that with Haiku; the run prints generation, reranker and judge
+costs. The judge caps itself at 4 concurrent requests and retries rate limits.
+
+Runs are saved to `evals/runs/rag_pipeline/`, each with a Markdown report (same name, `.md`):
+every setting that shapes the result (retrieval mode, `rrf_k`, hybrid candidates, reranking,
+comparison chunk limits, generator and judge with their effort), triad scores overall and by
+category, the diagnosis, and for every failing case the retrieved chunks and the claims the
+judge rejected.
 
 ### 3. Application evals
 

@@ -120,6 +120,44 @@ class ClaudeJudge(DeepEvalBaseLLM):
         return token_cost("judge", self.name, self.input_tokens, self.output_tokens)
 
 
+def _verdict(item) -> str:
+    """A DeepEval verdict as plain text: "yes", "no" or "borderline"."""
+    value = getattr(item, "verdict", "")
+    return str(getattr(value, "value", value)).lower()
+
+
+def metric_details(name: str, metric) -> dict | None:
+    """What the judge did not accept, item by item, so a report can show *why* a score is low.
+
+    Faithfulness: answer claims the excerpts don't support. Answer relevancy: answer
+    statements that don't address the question. DeepEval keeps one verdict per
+    claim/statement, in order. Other metrics (no `verdicts`) give None.
+
+    Only "no" verdicts lower the score; "borderline" (partly supported / partly relevant)
+    counts as passing in both metrics, so those are kept apart as context.
+
+    The judge sometimes returns a different number of verdicts than claims. The score is
+    computed from the verdicts alone, so they are still listed, with "text" None (it can't
+    be matched to a claim) and the judge's reason, which usually names the claim anyway.
+    """
+    items = getattr(metric, "claims" if name == "faithfulness" else "statements", None) or []
+    verdicts = getattr(metric, "verdicts", None)
+    if not verdicts:
+        return None
+    texts = items if len(items) == len(verdicts) else [None] * len(verdicts)
+
+    def matching(verdict: str) -> list[dict]:
+        return [
+            {"text": text, "reason": getattr(v, "reason", None)}
+            for text, v in zip(texts, verdicts)
+            if _verdict(v) == verdict
+        ]
+
+    key = "unsupported" if name == "faithfulness" else "irrelevant"
+    return {"checked": len(verdicts), key: matching("no"), "borderline": matching("borderline"),
+            "matched": texts is items}  # fmt: skip
+
+
 async def score_case(
     test_case: LLMTestCase,
     metrics: dict,

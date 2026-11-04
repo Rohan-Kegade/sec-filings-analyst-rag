@@ -30,7 +30,13 @@ from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 
 from evals import GOLDENS_DIR, runs
-from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL, score_case, token_cost
+from evals.judge import (
+    DEFAULT_JUDGE_EFFORT,
+    DEFAULT_JUDGE_MODEL,
+    metric_details,
+    score_case,
+    token_cost,
+)
 from evals.runs import git_commit
 from sec_rag.config import settings
 from sec_rag.generation.llm import AnswerGenerator
@@ -125,43 +131,6 @@ def deepeval_metrics(judge: DeepEvalBaseLLM, include_reason: bool) -> dict:
         "faithfulness": FaithfulnessMetric(**common),
         "relevancy": AnswerRelevancyMetric(**common),
     }
-
-
-def _verdict(item) -> str:
-    """A DeepEval verdict as plain text: "yes", "no" or "borderline"."""
-    value = getattr(item, "verdict", "")
-    return str(getattr(value, "value", value)).lower()
-
-
-def metric_details(name: str, metric) -> dict | None:
-    """What the judge did not accept, item by item, so a report can show *why* a score is low.
-
-    Faithfulness: answer claims the excerpts don't support. Relevancy: answer statements that
-    don't address the question. DeepEval keeps one verdict per claim/statement, in order.
-
-    Only "no" verdicts lower the score; "borderline" (partly supported / partly relevant)
-    counts as passing in both metrics, so those are kept apart as context.
-
-    The judge sometimes returns a different number of verdicts than claims. The score is
-    computed from the verdicts alone, so they are still listed, with "text" None (it can't
-    be matched to a claim) and the judge's reason, which usually names the claim anyway.
-    """
-    items = getattr(metric, "claims" if name == "faithfulness" else "statements", None) or []
-    verdicts = getattr(metric, "verdicts", None)
-    if not verdicts:
-        return None
-    texts = items if len(items) == len(verdicts) else [None] * len(verdicts)
-
-    def matching(verdict: str) -> list[dict]:
-        return [
-            {"text": text, "reason": getattr(v, "reason", None)}
-            for text, v in zip(texts, verdicts)
-            if _verdict(v) == verdict
-        ]
-
-    key = "unsupported" if name == "faithfulness" else "irrelevant"
-    return {"checked": len(verdicts), key: matching("no"), "borderline": matching("borderline"),
-            "matched": texts is items}  # fmt: skip
 
 
 def generate_answers(
@@ -414,21 +383,8 @@ def markdown_report(result: dict, cost: str | None = None) -> str:
                   f"- **question:** {_md_cell(r['question'])}",
                   (f"- **faithfulness** {_fmt(r['faithfulness']['score'], 2)}, "
                    f"**relevancy** {_fmt(r['relevancy']['score'], 2)}")]  # fmt: skip
-        for metric, key, label in [("faithfulness", "unsupported", "Claims not supported"),
-                                   ("relevancy", "irrelevant", "Statements off the question")]:
-            details = r[metric].get("details", {})
-            for items, title in [(details.get(key, []), f"{label} (lower the score)"),
-                                 (details.get("borderline", []),
-                                  "Borderline: partly supported, not counted against it")]:
-                if items:
-                    noun = "claim" if metric == "faithfulness" else "statement"
-                    lines += ["", f"{metric} - {title}:", "", f"| {noun} | judge's reason |",
-                              "|---|---|"]  # fmt: skip
-                    lines += [f"| {_md_cell(c['text'] or '(not matched to a claim)')} "
-                              f"| {_md_cell(c['reason'] or '')} |"
-                              for c in items]  # fmt: skip
-            if not details and r[metric]["reason"] and (r[metric]["score"] or 0) < 1:
-                lines += ["", f"{metric}: {_md_cell(r[metric]['reason'])}"]
+        for metric in METRICS:
+            lines += runs.rejected_items_md(metric, r[metric])
         lines += ["", "<details><summary>Answer</summary>", "", r["answer"] or "", "",
                   "</details>", ""]  # fmt: skip
 
