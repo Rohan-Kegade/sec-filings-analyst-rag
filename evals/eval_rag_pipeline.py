@@ -14,6 +14,7 @@ All three are reference-free, so only questions are needed.
 
 import asyncio
 import logging
+import re
 import threading
 import time
 from collections.abc import Callable
@@ -153,8 +154,39 @@ async def score_all(questions: list[Question], outputs: list[dict],
     return await asyncio.gather(*(score(q, o) for q, o in zip(questions, outputs)))
 
 
+# Every question in this eval can be answered from the filings, so an answer saying the
+# excerpts lack something means retrieval missed the evidence (for at least part of it).
+SAYS_MISSING = re.compile(
+    r"\bexcerpts?\b[^.]{0,40}?\b(?:do|does|did)\s+not\s+"
+    r"(?:contain|include|state|provide|give|show|mention|report|disclose)",
+    re.IGNORECASE,
+)
+SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+# "**Microsoft (MSFT):** ..." - how comparison answers label each company's part.
+LABELLED_PART = re.compile(r"\*\*[^*\n]{1,60}:\*\*\s*([^\n]*)")
+
+
+def says_missing(answer: str) -> bool:
+    """Does the answer itself say the evidence is missing - as its first sentence, or as the
+    first sentence of a labelled part ("**MSFT:** The excerpts do not state ...")?
+
+    A caveat after a full answer ("The excerpts do not state the number of incidents.") is
+    not counted: the question was answered, and the caveat is about something else.
+    """
+    leads = [SENTENCE_END.split(answer.strip(), maxsplit=1)[0]]
+    leads += [SENTENCE_END.split(m.group(1), maxsplit=1)[0] for m in LABELLED_PART.finditer(answer)]
+    return any(SAYS_MISSING.search(lead) for lead in leads)
+
+
 def diagnose(row: dict) -> str:
-    """Which link of the triad failed, checked in pipeline order."""
+    """Which link of the triad failed, checked in pipeline order.
+
+    Retrieval failed when the answer says the excerpts lack the information, or when the
+    excerpts were mostly off-topic AND the answer missed the question. A low context score
+    on its own is not a failure: it is the share of *all* retrieved text that is relevant,
+    so a fact question answered from one sentence of one chunk scores low even when
+    retrieval found exactly what it needed.
+    """
     if row["generation_error"]:
         return "generation_error"
     if not row["sources"]:
@@ -162,7 +194,9 @@ def diagnose(row: dict) -> str:
     scores = {m: row[m]["score"] for m in METRICS}
     if any(s is None for s in scores.values()):
         return "judge_error"
-    if scores["context_relevance"] < LOW_CONTEXT:
+    if says_missing(row.get("answer") or ""):
+        return "retrieval"
+    if scores["context_relevance"] < LOW_CONTEXT and scores["answer_relevance"] < LOW_RELEVANT:
         return "retrieval"
     if scores["faithfulness"] < LOW_FAITHFUL:
         return "not_faithful"
@@ -251,7 +285,8 @@ logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(mes
 NOISE = 0.03
 SHORT = {"context_relevance": "context", "faithfulness": "faithful", "answer_relevance": "answer"}
 EXPLAIN = {
-    "retrieval": "retrieved excerpts are mostly off-topic",
+    "retrieval": ("retrieval missed evidence: the answer says the excerpts lack it, or the "
+                  "excerpts were off-topic and the answer missed the question"),
     "not_faithful": "answer makes claims the excerpts don't support",
     "off_target": "answer doesn't address the question well",
     "no_context": "nothing was retrieved",
@@ -330,8 +365,11 @@ def markdown_report(result: dict, cost: str | None = None) -> str:
 
     lines += ["", "## Diagnosis", "",
               ("The first link of the triad that failed, checked in pipeline order: retrieval "
-               f"(context < {LOW_CONTEXT}), then faithfulness (< {LOW_FAITHFUL}), then answer "
-               f"relevance (< {LOW_RELEVANT})."), "",
+               "(the answer says the excerpts lack the information, or context < "
+               f"{LOW_CONTEXT} and answer relevance < {LOW_RELEVANT}), then faithfulness "
+               f"(< {LOW_FAITHFUL}), then answer relevance (< {LOW_RELEVANT}). A low context "
+               "score alone is not a failure: a fact question uses one sentence of one chunk."),
+              "",
               "| diagnosis | cases | meaning |", "|---|---|---|"]  # fmt: skip
     for name, count in sorted(result["summary"]["diagnosis"].items(), key=lambda kv: -kv[1]):
         lines.append(f"| {name} | {count} | {EXPLAIN.get(name, 'all three links passed')} |")

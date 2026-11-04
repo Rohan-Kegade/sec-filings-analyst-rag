@@ -33,6 +33,13 @@ def make_index(tmp_path) -> KeywordIndex:
 def test_match_query_quotes_terms_and_drops_question_words():
     assert to_match_query("What does MSFT say about Azure?") == '"MSFT" OR "Azure"'
     assert to_match_query("What is it?") == ""
+    # "report" / "each" phrase the question; they appear all over a 10-K.
+    assert to_match_query("How many employees did MSFT each report in 2024?") == (
+        '"many" OR "employees" OR "MSFT" OR "2024"'
+    )
+    assert to_match_query("What are MSFT's reportable segments?") == (
+        '"MSFT" OR "s" OR "reportable" OR "segments"'
+    )
 
 
 def test_special_characters_do_not_break_search(tmp_path):

@@ -9,6 +9,7 @@ from sec_rag.retrieval.reranker import PassageScore, Reranker, RerankScores, pas
 from sec_rag.retrieval.retriever import (
     Retriever,
     chunks_per_entity,
+    focus_question,
     interleave,
     split_by_entity,
 )
@@ -183,6 +184,49 @@ def test_comparison_searches_each_company_and_interleaves(monkeypatch):
     assert [rc.chunk.ticker for rc in results] == ["AAPL", "MSFT"] * 4  # 4 each, alternating
     traced, _ = retriever.hybrid_trace("Compare AAPL and MSFT cybersecurity in 2025", k=8)
     assert [rc.chunk.chunk_id for rc in traced] == [rc.chunk.chunk_id for rc in results]
+
+
+@pytest.mark.parametrize("question, ticker, expected", [
+    ("How many employees did AAPL, MSFT and NVDA each report in 2024?", "MSFT",
+     "How many employees did MSFT each report in 2024?"),
+    ("How many employees did AAPL, MSFT and NVDA each report in 2024?", "NVDA",
+     "How many employees did NVDA each report in 2024?"),
+    ("Compare AAPL vs MSFT vs NVDA gross margin in 2024.", "AAPL",
+     "Compare AAPL gross margin in 2024."),
+    ("How do AAPL's and MSFT's AI risks differ?", "MSFT", "How do MSFT's AI risks differ?"),
+    ("What did MSFT & NVDA say about OpenAI?", "NVDA", "What did NVDA say about OpenAI?"),
+    ("What does AAPL say about risk?", "AAPL", "What does AAPL say about risk?"),  # nothing to drop
+])  # fmt: skip
+def test_focus_question_keeps_only_one_company(question, ticker, expected):
+    assert focus_question(question, ticker, ["AAPL", "MSFT", "NVDA"]) == expected
+
+
+class RecordingEmbedder(FakeEmbedder):
+    def __init__(self):
+        self.questions = []
+
+    def embed_query(self, question):
+        self.questions.append(question)
+        return [0.0]
+
+
+class RecordingKeywordIndex(EmptyKeywordIndex):
+    def __init__(self):
+        super().__init__()
+        self.questions = []
+
+    def search(self, question, k, filters=None):
+        self.questions.append(question)
+        return super().search(question, k, filters)
+
+
+def test_each_company_search_uses_a_question_about_that_company_only():
+    embedder, keyword = RecordingEmbedder(), RecordingKeywordIndex()
+    retriever = Retriever(embedder, EntityStore(), keyword, mode="hybrid", rerank=False)
+    retriever.retrieve("Compare how AAPL and MSFT describe cybersecurity in 2025", k=8)
+    expected = ["Compare how AAPL describe cybersecurity in 2025",
+                "Compare how MSFT describe cybersecurity in 2025"]  # fmt: skip
+    assert embedder.questions == expected and keyword.questions == expected
 
 
 def test_single_company_question_is_not_split():

@@ -55,10 +55,11 @@ def test_run_scores_the_triad_and_diagnoses_failures():
 
     def factory():
         n = len(seen)
-        context = 0.1 if n == 1 else 0.6  # the 2nd scored question has poor retrieval
+        # The 2nd scored question has poor retrieval, and its answer misses the question.
+        context, answer = (0.1, 0.4) if n == 1 else (0.6, 0.9)
         metrics = {"context_relevance": FakeMetric(score=context),
                    "faithfulness": FakeMetric(score=1.0),
-                   "answer_relevance": FakeMetric(score=0.9)}  # fmt: skip
+                   "answer_relevance": FakeMetric(score=answer)}  # fmt: skip
         seen.append(metrics)
         return metrics
 
@@ -134,14 +135,23 @@ def test_markdown_report_lists_failing_cases_with_rejected_claims():
     assert "| good | fact | 0.60 | 0.50 | 0.90 | not_faithful | 1 / 3 |" in report
 
 
-@pytest.mark.parametrize("scores, expected", [
-    ((0.6, 1.0, 0.9), "ok"),
-    ((0.2, 1.0, 0.9), "retrieval"),
-    ((0.6, 0.5, 0.9), "not_faithful"),
-    ((0.6, 1.0, 0.4), "off_target"),
+@pytest.mark.parametrize("scores, answer, expected", [
+    ((0.6, 1.0, 0.9), "Revenue was $10 [1].", "ok"),
+    # Low context alone is fine: a fact answered from one sentence of one chunk.
+    ((0.05, 1.0, 1.0), "MSFT had 228,000 employees [1].", "ok"),
+    ((0.2, 1.0, 0.4), "Something else [1].", "retrieval"),
+    # The answer says the evidence is missing: retrieval failed, whatever the scores...
+    ((0.6, 1.0, 0.9), "The excerpts do not state MSFT's attrition rate.", "retrieval"),
+    ((0.6, 1.0, 0.9), ("**NVIDIA (NVDA):** 29,600 [1].\n\n**Microsoft (MSFT):** The excerpts "
+                       "do not state a total headcount."), "retrieval"),
+    # ...but not when it is a caveat after a full answer.
+    ((0.6, 1.0, 0.9), ("NVDA follows ISO 27001 [1]. The excerpts do not state the number of "
+                       "incidents."), "ok"),
+    ((0.6, 0.5, 0.9), "Revenue was $10 [1].", "not_faithful"),
+    ((0.6, 1.0, 0.4), "Revenue was $10 [1].", "off_target"),
 ])  # fmt: skip
-def test_diagnose_checks_links_in_pipeline_order(scores, expected):
-    row = {"generation_error": None, "sources": ["s"]}
+def test_diagnose_checks_links_in_pipeline_order(scores, answer, expected):
+    row = {"generation_error": None, "sources": ["s"], "answer": answer}
     for metric, score in zip(eval_rag_pipeline.METRICS, scores):
         row[metric] = {"score": score}
     assert eval_rag_pipeline.diagnose(row) == expected

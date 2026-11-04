@@ -24,13 +24,16 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks USING fts5(
 FILTER_COLUMNS = ("ticker", "fiscal_year", "item")
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]+")
 # Question words that carry no topic. BM25 already down-weights common words, but dropping
-# these keeps chunks that merely repeat "what does ... describe" from matching.
+# these keeps chunks that merely repeat "what does ... describe" from matching. "report" and
+# "disclose" are how questions ask ("how many employees did X report?") but appear all over
+# a 10-K ("reported revenue", "this report"), so they pulled in the wrong chunks.
 STOPWORDS = {
     "a", "about", "an", "and", "are", "as", "at", "be", "by", "can", "describe", "described",
-    "did", "do", "does", "for", "from", "has", "have", "how", "in", "is", "it", "its",
-    "mention", "mentioned", "of", "on", "or", "say", "said", "tell", "that", "the", "their",
-    "these", "this", "those", "to", "was", "were", "what", "when", "where", "which", "who",
-    "why", "with",
+    "did", "disclose", "disclosed", "discloses", "do", "does", "each", "for", "from", "has",
+    "have", "how", "in", "is", "it", "its", "mention", "mentioned", "of", "on", "or",
+    "report", "reported", "reports", "say", "said", "tell", "that", "the", "their", "these",
+    "this", "those", "to", "was", "were", "what", "when", "where", "which", "who", "why",
+    "with",
 }  # fmt: skip
 WRITE_BATCH_SIZE = 500
 

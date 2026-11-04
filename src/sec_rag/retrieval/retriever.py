@@ -2,6 +2,7 @@
 
 import logging
 import math
+import re
 
 from sec_rag.config import settings
 from sec_rag.indexing.embedder import Embedder
@@ -75,7 +76,14 @@ class Retriever:
         if len(parts) == 1:
             return self._search_one(question, k, filters)
         per_entity = chunks_per_entity(k, len(parts))
-        found = [self._search_one(question, per_entity, part) for part in parts]
+        # Each company's search uses the question with the other companies taken out: the
+        # filter already limits it to one company's filings, and the other tickers would
+        # only dilute the query (keyword terms that can't match, a blended embedding).
+        tickers = _as_list(filters.get("ticker"))
+        found = []
+        for part in parts:
+            focused = focus_question(question, part.get("ticker"), tickers)
+            found.append(self._search_one(focused, per_entity, part))
         results = interleave([results for results, _ in found])
         dropped = [chunk for _, left_out in found for chunk in left_out]
         return results, dropped
@@ -168,6 +176,42 @@ class Retriever:
         missing = [chunk_id for chunk_id in chunk_ids if chunk_id not in chunks]
         if missing:
             chunks.update(self.store.get_by_ids(missing))
+
+
+JOINERS = {",", "and", "or", "vs", "vs.", "versus", "&", "/"}
+
+
+def _as_list(value) -> list:
+    if value is None:
+        return []
+    return list(value) if isinstance(value, (list, tuple, set)) else [value]
+
+
+def focus_question(question: str, ticker: str | None, tickers: list[str]) -> str:
+    """The question with every ticker except `ticker` removed, for that company's search.
+
+    "How many employees did AAPL, MSFT and NVDA each report?" -> for MSFT:
+    "How many employees did MSFT each report?". Unchanged when there is nothing to remove.
+    """
+    others = {t for t in tickers if t != ticker}
+    if not ticker or not others:
+        return question
+    tokens = re.findall(r"[A-Za-z0-9]+(?:'s)?|[^\sA-Za-z0-9]+", question)
+    words = [t.removesuffix("'s") for t in tokens]
+    removed: set[int] = set()
+    for i, word in enumerate(words):
+        if word not in others:
+            continue
+        removed.add(i)
+        # Also drop the "and" / "," / "vs" that joins this ticker to the list: the one
+        # before it if still there, else the one after it.
+        for j in (i - 1, i + 1):
+            if 0 <= j < len(tokens) and j not in removed and tokens[j].lower() in JOINERS:
+                removed.add(j)
+                break
+    kept = [t for i, t in enumerate(tokens) if i not in removed]
+    text = " ".join(kept)
+    return re.sub(r"\s+([,?.!:;)])", r"\1", text).replace("( ", "(")
 
 
 def split_by_entity(filters: dict) -> list[dict]:
