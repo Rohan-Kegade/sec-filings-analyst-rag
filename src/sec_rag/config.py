@@ -20,12 +20,10 @@ class Settings(BaseSettings):
     chunk_size: int = 1500
     chunk_overlap: int = 200
 
-    # Embeddings (Voyage AI API). Changing the model needs a full `sec-rag index`.
-    voyage_api_key: str | None = Field(default=None, validation_alias="VOYAGE_API_KEY")
-    embedding_api_url: str | None = None  # default: picked from the key (Atlas or Voyage)
-    embedding_model: str = "voyage-finance-2"
-    embedding_batch_size: int = 128  # chunks per API request
-    embedding_max_retries: int = 6  # on rate limits (HTTP 429) and server errors
+    # Embeddings
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_query_prefix: str = "Represent this sentence for searching relevant passages: "
+    embedding_batch_size: int = 64
 
     # Retrieval
     top_k: int = 8

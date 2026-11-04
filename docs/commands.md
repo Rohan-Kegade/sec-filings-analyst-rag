@@ -18,8 +18,8 @@ ask       ->  an answer with sources, using the two indexes
 
 Each step saves its result to disk and the next step reads it. This means you can stop
 after any step, look at what it produced, and rerun only the steps affected by a change.
-It also keeps the cheap steps separate from the one that costs money: only `index` calls a
-paid API.
+It also keeps the quick steps separate from the slow one: `index`, which runs the
+embedding model over every chunk.
 
 > On this machine, Windows Smart App Control blocks `sec-rag.exe`. Run every command as
 > `python -m sec_rag.cli <command>` instead, for example `python -m sec_rag.cli index`.
@@ -108,8 +108,8 @@ whether a sentence is a risk the company warns about or a result it reports.
 **Things worth knowing:**
 
 - **Free and local.** Nothing is sent anywhere; it takes a few seconds per filing.
-- **Check the output here.** The JSON files are readable. Before paying for embeddings, it
-  is worth opening one and checking that the sections look right (for example, that Item
+- **Check the output here.** The JSON files are readable. Before spending time on
+  embeddings, it is worth opening one and checking that the sections look right (for example, that Item
   1A really contains the risk factors and is not empty).
 - **Rerun after parser changes.** `parse` always re-parses every downloaded filing and
   overwrites the JSON files, so improvements to the parser apply to all of them.
@@ -133,7 +133,7 @@ tens of thousands of words), so the sections are first cut into small pieces cal
 
 1. **Reads the parsed filings** from `data/processed/`. If a downloaded filing has not been
    parsed yet, it is skipped and named in the output, so you know to run `sec-rag parse`.
-   If nothing has been parsed at all, the command stops before spending anything.
+   If nothing has been parsed at all, the command stops before embedding anything.
 
 2. **Chunks each section.** Text is packed paragraph by paragraph into chunks of about
    1,500 characters (roughly 250 words). Two details make the chunks more useful:
@@ -149,10 +149,10 @@ tens of thousands of words), so the sections are first cut into small pieces cal
 3. **Embeds each chunk.** An *embedding* is a list of numbers that represents what a piece
    of text means. Texts with similar meaning get similar numbers, even when they use
    different words ("supply chain disruption" and "shortages of components" end up close
-   together). The chunks are sent, 128 at a time, to Voyage AI's `voyage-finance-2` model,
-   which is trained on financial text and returns 1,024 numbers per chunk. This is the only
-   step that costs money; if Voyage asks the client to slow down (rate limiting), the
-   command waits and retries automatically.
+   together). The embeddings come from `BAAI/bge-small-en-v1.5`, a small open-source model
+   that runs on your own machine, 64 chunks at a time, and returns 384 numbers per chunk.
+   It is free and needs no API key. The first run downloads the model (about 130 MB) to
+   the Hugging Face cache; later runs load it from there.
 
 4. **Stores every chunk in two indexes:**
    - **Vector store** (ChromaDB, in `data/vectorstore/`): the chunk text, its embedding and
@@ -170,10 +170,12 @@ tens of thousands of words), so the sections are first cut into small pieces cal
   which model built it; if that differs from the configured model, `index` clears it and
   re-embeds every filing. Asking a question against a store built with another model gives
   a clear error telling you to run `index`.
-- **Cost.** Indexing about 2,300 chunks (9 filings) is roughly a million tokens, which is
-  within Voyage's free allowance.
+- **Time and memory.** Embedding is the slow part: it runs on the CPU, so expect minutes
+  rather than seconds for about 2,300 chunks (9 filings). Loading the model needs about
+  1 GB of free memory; with too little, it fails with errors such as "paging file is too
+  small" or a misleading "Unrecognized processing class".
 - **`--keyword-only`** rebuilds just the keyword index from chunks already in the vector
-  store. It calls no API and costs nothing.
+  store, without running the embedding model.
 
 ---
 
@@ -192,8 +194,8 @@ from them, with citations.
    (`AAPL`, `MSFT`) and years (`2024`, `FY2024`) narrow the search to those filings. Writing
    the company name ("Apple") does not set a filter, so use the ticker when you want to be
    precise. You can also set filters directly with `--ticker AAPL --year 2024`.
-2. **Searches both indexes.** The question is embedded with the same Voyage model (in its
-   "query" mode) and compared with the stored chunks by meaning; at the same time the
+2. **Searches both indexes.** The question is embedded with the same model (with a short
+   instruction in front that marks it as a search query) and compared with the stored chunks by meaning; at the same time the
    keyword index is searched for its words. The two ranked lists are merged with
    *Reciprocal Rank Fusion*: a chunk ranked high in both lists rises to the top.
 3. **Handles comparisons fairly.** A question naming several companies or years (for
