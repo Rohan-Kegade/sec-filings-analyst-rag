@@ -132,7 +132,18 @@ def test_metric_details_lists_rejected_claims_only():
         "checked": 3,
         "unsupported": [{"text": "Most work in Redmond.", "reason": "Not in the excerpts."}],
         "borderline": [{"text": "Headcount grew.", "reason": "Implied only."}],
+        "matched": True,
     }
+
+
+def test_metric_details_without_matching_claims_still_lists_rejections():
+    # The judge returned 3 verdicts for 2 claims: the score uses the verdicts, so keep them.
+    metric = FakeFaithfulness(score=0.5)
+    asyncio.run(metric.a_measure(None))
+    metric.claims = metric.claims[:2]
+    details = eval_generator.metric_details("faithfulness", metric)
+    assert details["checked"] == 3 and details["matched"] is False
+    assert details["unsupported"] == [{"text": None, "reason": "Not in the excerpts."}]
     # Metrics without per-item verdicts (or a mismatch) give no details.
     assert eval_generator.metric_details("relevancy", FakeMetric(score=1.0)) is None
 

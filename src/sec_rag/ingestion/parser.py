@@ -49,14 +49,70 @@ ITEM_PATTERN = re.compile(
 )
 
 
+# Elements that start a new line. Everything else (span, b, ix:nonfraction, ...) is inline:
+# XBRL wraps every number in its own tag, and breaking lines there split sentences like
+# "a lease term of \n10.3\n years".
+BLOCK_TAGS = ["p", "div", "br", "li", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6",
+              "hr", "section", "article", "header", "footer", "blockquote", "pre", "dt", "dd"]  # fmt: skip
+CELL_SEPARATOR = " | "
+
+
+def _cell_text(cell) -> str:
+    return re.sub(r"\s+", " ", cell.get_text(" ")).strip()
+
+
+def _join_cells(cells: list[str]) -> str:
+    """Join a row's non-empty cells, gluing back the pieces filings put in cells of their own:
+    "$" | "11,534" -> "$11,534", "(" | "1,984" | ")" -> "(1,984)", "3.1" | "%" -> "3.1%"."""
+    joined: list[str] = []
+    glue_next = False
+    for cell in cells:
+        if not cell:
+            continue
+        if glue_next and joined:
+            joined[-1] += cell
+            glue_next = False
+        elif cell in (")", "%", ")%", "%)") and joined:
+            joined[-1] += cell
+        else:
+            joined.append(cell)
+        if cell in ("$", "(", "($", "$("):
+            glue_next = True
+    text = CELL_SEPARATOR.join(joined)
+    return re.sub(r"\(\s+", "(", re.sub(r"\s+\)", ")", text))
+
+
+def _table_text(table) -> str:
+    """A table as one line per row, cells separated by " | ", rows that are empty dropped.
+
+    Flattened to plain text, every cell landed on its own line, far from its column header,
+    so "$ / 11,534 / $ / 896 / $ / 12,430" lost which number was the total.
+    """
+    rows = []
+    for tr in table.find_all("tr"):
+        if tr.find_parent("table") is not table:
+            continue  # a nested table's rows are handled with that table
+        row = _join_cells([_cell_text(cell) for cell in tr.find_all(["td", "th"], recursive=False)])
+        if row:
+            rows.append(row)
+    return "\n".join(rows)
+
+
 def html_to_text(html: str | bytes) -> str:
     soup = BeautifulSoup(html, "lxml")
     # Inline XBRL filings carry a hidden header full of machine-readable facts.
     for tag in soup.find_all(["script", "style", "ix:header"]):
         tag.decompose()
-    text = soup.get_text(separator="\n")
+    # Innermost tables first, so an outer table sees its nested ones already as text.
+    for table in reversed(soup.find_all("table")):
+        table.replace_with(f"\n\n{_table_text(table)}\n\n")
+    for tag in soup.find_all(BLOCK_TAGS):
+        tag.insert_before("\n")
+        tag.insert_after("\n")
+    text = soup.get_text()
     text = text.replace("\xa0", " ")
     text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r" *\n *", "\n", text)
     text = re.sub(r"\n\s*\n+", "\n\n", text)
     return text.strip()
 

@@ -92,7 +92,20 @@ whether a sentence is a risk the company warns about or a result it reports.
 **What it does, step by step:**
 
 1. **Extracts the readable text.** It removes HTML tags, scripts and styling and keeps the
-   text a person would see, with paragraph breaks preserved.
+   text a person would see, with paragraph breaks preserved. Line breaks are only made
+   between blocks (paragraphs, list items, headings), so a number wrapped in its own XBRL
+   tag stays inside its sentence ("a lease term of 10.3 years").
+   **Tables** are kept as tables: one row per line, cells separated by ` | `, and the
+   `$`, `(` and `)` that filings put in cells of their own are glued back to their numbers:
+
+   ```
+   Operating Leases | Finance Leases | Total
+   Less: Imputed interest | (1,984) | (376) | (2,360)
+   Total lease liabilities | $11,534 | $896 | $12,430
+   ```
+
+   Flattened to plain text instead, every cell would land on its own line, far from its
+   column header, and it becomes easy to mistake which figure is the total.
 2. **Finds where each Item starts.** It looks for headings like "Item 1A. Risk Factors".
    Every 10-K also lists these headings in its table of contents near the top; the parser
    recognises that list and skips it, so a section starts at the real heading, not at the
@@ -144,7 +157,10 @@ tens of thousands of words), so the sections are first cut into small pieces cal
      say "our revenue grew 6%"; the header tells the search, and later Claude, whose
      revenue, which year and which section.
 
-   Chunks never cross from one Item into another.
+   Chunks never cross from one Item into another. A table too long for one chunk is cut
+   between rows, never mid-row, and every later piece starts with the table's header row
+   again, so its figures can still be read against the right column (which year, which
+   total).
 
 3. **Embeds each chunk.** An *embedding* is a list of numbers that represents what a piece
    of text means. Texts with similar meaning get similar numbers, even when they use
