@@ -152,8 +152,11 @@ python -m evals.eval_generator run --category partial  # one category
 python -m evals.eval_generator compare                 # last two runs
 ```
 
-Roughly $0.04 per golden for the Sonnet judge, plus generation. Runs are saved to
-`evals/runs/generator/`.
+Roughly $0.04 per golden for the Sonnet judge, plus generation; the run prints both costs.
+Runs are saved to `evals/runs/generator/`, each with a Markdown report (same name, `.md`):
+settings, scores overall and by category, the no-answer cases, and for every weak answer
+the exact claims the judge found unsupported (or statements off the question), with its
+reason for each.
 
 ### 2. Pipeline evals: the RAG triad
 

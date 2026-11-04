@@ -1,5 +1,8 @@
 """DeepEval generator eval: goldens, excerpt parsing and runner, with fakes (no API calls)."""
 
+import asyncio
+from types import SimpleNamespace
+
 import pytest
 
 from evals import eval_generator
@@ -95,6 +98,78 @@ def test_run_generates_from_frozen_context_and_scores():
     summary = result["summary"]
     assert summary["faithfulness"] == 1.0 and summary["relevancy"] == 0.5
     assert summary["generation_errors"] == 1
+    # The failed generation is not counted again as two judge errors.
+    assert summary["faithfulness_errors"] == summary["relevancy_errors"] == 0
     assert summary["abstained"] == 1.0  # the one no-answer case abstained
     assert len(seen) == 2  # the failed generation was not sent to the judge
     assert result["settings"]["generator"] == "claude-haiku-5-5"
+
+
+class FakeFaithfulness(FakeMetric):
+    """Records claims and verdicts the way DeepEval's FaithfulnessMetric does."""
+
+    async def a_measure(self, test_case, _show_indicator=True):
+        await super().a_measure(test_case, _show_indicator)
+        self.claims = ["Microsoft employed 228,000 people.", "Most work in Redmond.",
+                       "Headcount grew."]  # fmt: skip
+        self.verdicts = [
+            SimpleNamespace(verdict="yes", reason=None),
+            SimpleNamespace(verdict=SimpleNamespace(value="no"), reason="Not in the excerpts."),
+            SimpleNamespace(verdict="borderline", reason="Implied only."),
+        ]
+
+
+def faithfulness_factory():
+    return {"faithfulness": FakeFaithfulness(score=0.5), "relevancy": FakeMetric(score=1.0)}
+
+
+def test_metric_details_lists_rejected_claims_only():
+    metric = FakeFaithfulness(score=0.5)
+    asyncio.run(metric.a_measure(None))
+    details = eval_generator.metric_details("faithfulness", metric)
+    # Only "no" lowers the score; "borderline" passes in DeepEval, so it is kept apart.
+    assert details == {
+        "checked": 3,
+        "unsupported": [{"text": "Most work in Redmond.", "reason": "Not in the excerpts."}],
+        "borderline": [{"text": "Headcount grew.", "reason": "Implied only."}],
+    }
+    # Metrics without per-item verdicts (or a mismatch) give no details.
+    assert eval_generator.metric_details("relevancy", FakeMetric(score=1.0)) is None
+
+
+def test_run_records_details_and_reports_progress():
+    events = []
+    result = eval_generator.run(
+        FakeGenerator(), [golden("a"), golden("b"), golden("broken")],
+        metric_factory=faithfulness_factory, concurrency=2, judge_name="claude-haiku-5-5",
+        progress=lambda stage, done, total: events.append((stage, done, total)),
+        judge_effort="high",
+    )  # fmt: skip
+    rows = {r["id"]: r for r in result["cases"]}
+    assert rows["a"]["faithfulness"]["details"]["unsupported"][0]["text"] == "Most work in Redmond."
+    assert "details" not in rows["a"]["relevancy"]
+    assert result["settings"]["judge_effort"] == "high"
+    # Generation counts every golden; judging skips the one whose generation failed.
+    assert events[0] == ("generated", 0, 3) and ("generated", 3, 3) in events
+    assert ("judged", 0, 2) in events and events[-1] == ("judged", 2, 2)
+
+
+def test_markdown_report_shows_rejected_claims_and_no_answer_cases(tmp_path):
+    goldens = [golden("weak"), golden("empty", category="no_answer"), golden("broken")]
+    result = eval_generator.run(FakeGenerator(), goldens, metric_factory=faithfulness_factory,
+                                concurrency=1, judge_name="claude-haiku-5-5")  # fmt: skip
+    report = eval_generator.markdown_report(result, cost="judge tokens: 1 in / 1 out (~$0.00)")
+
+    assert report.startswith("# Generator eval: ")
+    assert "| cost | judge tokens: 1 in / 1 out (~$0.00) |" in report
+    assert "## No-answer cases" in report and "| empty | yes |" in report
+    assert "### weak (fact)" in report
+    assert "faithfulness - Claims not supported (lower the score):" in report
+    assert "| Most work in Redmond. | Not in the excerpts. |" in report
+    assert "| Headcount grew. | Implied only. |" in report
+    assert "| weak | fact | 0.50 | 1.00 | 1 / 3 |" in report
+    assert "| broken | fact | error | error | - |" in report
+
+    from evals import runs
+    path = runs.save_report(report, tmp_path / "run.json")
+    assert path.suffix == ".md" and path.read_text(encoding="utf-8") == report

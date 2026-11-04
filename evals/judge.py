@@ -1,6 +1,7 @@
 """Claude as a DeepEval judge model, and scoring one test case with judge metrics."""
 
 import asyncio
+from collections.abc import Callable
 
 import anthropic
 from deepeval.models import DeepEvalBaseLLM
@@ -21,6 +22,15 @@ PRICES = {"claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0),
 # the SDK retry rate-limited requests longer than its default 2 times.
 MAX_CONCURRENT_REQUESTS = 4
 MAX_RETRIES = 6
+
+
+def token_cost(label: str, model: str, input_tokens: int, output_tokens: int) -> str:
+    """e.g. "judge tokens: 1,200 in / 300 out (~$0.01)"; no price for unknown models."""
+    summary = f"{label} tokens: {input_tokens:,} in / {output_tokens:,} out"
+    if model in PRICES:
+        price_in, price_out = PRICES[model]
+        summary += f" (~${input_tokens / 1e6 * price_in + output_tokens / 1e6 * price_out:.2f})"
+    return summary
 
 
 class ClaudeJudge(DeepEvalBaseLLM):
@@ -107,20 +117,20 @@ class ClaudeJudge(DeepEvalBaseLLM):
             return self._result(await messages.create(**self._request(prompt)), None)
 
     def cost_summary(self) -> str:
-        summary = f"judge tokens: {self.input_tokens:,} in / {self.output_tokens:,} out"
-        if self.name in PRICES:
-            price_in, price_out = PRICES[self.name]
-            cost = self.input_tokens / 1e6 * price_in + self.output_tokens / 1e6 * price_out
-            summary += f" (~${cost:.2f})"
-        return summary
+        return token_cost("judge", self.name, self.input_tokens, self.output_tokens)
 
 
 async def score_case(
-    test_case: LLMTestCase, metrics: dict, semaphore: asyncio.Semaphore
+    test_case: LLMTestCase,
+    metrics: dict,
+    semaphore: asyncio.Semaphore,
+    details: Callable[[str, object], dict | None] | None = None,
 ) -> dict:
     """Run each metric on one test case. A failed metric is recorded, not raised.
 
-    Shared by every eval: returns {metric name: {"score", "reason", "error"}}.
+    Shared by every eval: returns {metric name: {"score", "reason", "error"}}. With
+    `details`, whatever details(name, metric) returns for a scored metric is added under
+    "details", e.g. the claims the judge found unsupported.
     """
     async with semaphore:
         scores = {}
@@ -128,6 +138,9 @@ async def score_case(
             try:
                 await metric.a_measure(test_case, _show_indicator=False)
                 scores[name] = {"score": metric.score, "reason": metric.reason, "error": None}
+                extra = details(name, metric) if details else None
+                if extra:
+                    scores[name]["details"] = extra
             except Exception as exc:  # judge or API failure: keep the rest of the run going
                 scores[name] = {"score": None, "reason": None, "error": str(exc)}
         return scores

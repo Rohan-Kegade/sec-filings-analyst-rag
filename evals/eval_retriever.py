@@ -24,7 +24,7 @@ from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 
 from evals import GOLDENS_DIR, runs
-from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL, PRICES, score_case
+from evals.judge import DEFAULT_JUDGE_EFFORT, DEFAULT_JUDGE_MODEL, score_case, token_cost
 from evals.runs import git_commit
 from sec_rag.config import settings
 from sec_rag.retrieval.retriever import Retriever
@@ -248,12 +248,7 @@ def rerank_cost(retrievers: dict) -> str | None:
     reranker = next((r.reranker for r in retrievers.values() if r.rerank), None)
     if reranker is None:
         return None
-    summary = f"reranker tokens: {reranker.input_tokens:,} in / {reranker.output_tokens:,} out"
-    if reranker.model in PRICES:
-        price_in, price_out = PRICES[reranker.model]
-        dollars = reranker.input_tokens / 1e6 * price_in + reranker.output_tokens / 1e6 * price_out
-        summary += f" (~${dollars:.2f})"
-    return summary
+    return token_cost("reranker", reranker.model, reranker.input_tokens, reranker.output_tokens)
 
 
 def _retrievers(modes: list[str]) -> dict:

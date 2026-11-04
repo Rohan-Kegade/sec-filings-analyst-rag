@@ -75,3 +75,23 @@ def test_api_errors_become_generation_errors():
         generator.complete("system", "prompt")
     with pytest.raises(GenerationError):
         list(generator.complete_stream("system", "prompt"))
+
+
+class UsageStream(FakeStream):
+    def get_final_message(self):
+        message = super().get_final_message()
+        message.usage = SimpleNamespace(input_tokens=100, output_tokens=20)
+        return message
+
+
+def test_token_use_is_counted_across_calls():
+    generator = AnswerGenerator(client=FakeClient(UsageStream(["a"])))
+    generator.complete("system", "prompt")
+    list(generator.complete_stream("system", "prompt"))
+    assert (generator.input_tokens, generator.output_tokens) == (200, 40)
+
+
+def test_messages_without_usage_are_not_counted():
+    generator = AnswerGenerator(client=FakeClient(FakeStream(["a"])))
+    generator.complete("system", "prompt")
+    assert (generator.input_tokens, generator.output_tokens) == (0, 0)

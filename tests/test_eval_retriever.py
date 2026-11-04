@@ -260,3 +260,14 @@ def test_source_mix_counts_against_each_search_top_k():
     }  # fmt: skip
     assert eval_retriever.source_mix([{"id": "no trace"}], k=8) is None
 
+
+
+def test_token_cost_prices_known_models_only():
+    from evals.judge import token_cost
+
+    assert token_cost("judge", "claude-haiku-5-5", 1_000_000, 1_000_000) == (
+        "judge tokens: 1,000,000 in / 1,000,000 out (~$0.60)"
+    )
+    assert token_cost("generator", "some-other-model", 10, 5) == (
+        "generator tokens: 10 in / 5 out"
+    )
